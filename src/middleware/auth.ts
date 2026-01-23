@@ -3,14 +3,13 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'botari_secret_key';
 
-export interface AuthUser {
-  user_id: number;
+export interface AuthPayload {
+  id: number;
   business_id: number;
   role: string;
   email?: string;
 }
 
-// Middleware to verify JWT and attach user payload
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
@@ -23,15 +22,9 @@ export const authenticateJWT = (req: Request, res: Response, next: NextFunction)
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthUser;
+    const decoded = jwt.verify(token, JWT_SECRET) as AuthPayload;
 
-    // Attach decoded user info to req.user
-    (req as any).user = {
-      id: decoded.user_id,
-      business_id: decoded.business_id,
-      role: decoded.role,
-      email: decoded.email || ''
-    };
+    (req as any).user = decoded;
 
     next();
   } catch (err) {
