@@ -1,15 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { AuthPayload } from './verifyToken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'botari_secret_key';
 
-export interface AuthPayload {
-  id: number;
-  business_id: number;
-  role: string;
-  email?: string;
-}
-
+// Middleware to verify JWT and attach user payload
 export const authenticateJWT = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {

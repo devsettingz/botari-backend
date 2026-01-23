@@ -1,6 +1,8 @@
-export function requireRole(role: string) {
-  return function (req: any, res: any, next: any) {
-    // req.user is set by verifyToken middleware
+import { Response, NextFunction } from 'express';
+import { AuthRequest, AuthPayload } from './verifyToken';
+
+export function requireRole(role: AuthPayload['role']) {
+  return function (req: AuthRequest, res: Response, next: NextFunction) {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized: no user found' });
     }
