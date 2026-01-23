@@ -4,7 +4,7 @@ import makeWASocket, {
   AnyMessageContent
 } from '@adiwajshing/baileys';
 import { Boom } from '@hapi/boom';
-import { processMessage } from '../../../botari-agent/src/index';
+import { processMessage } from '../agent';   // ✅ fixed import
 
 export async function startWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');

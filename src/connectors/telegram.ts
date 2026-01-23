@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { processMessage } from '../../../botari-agent/src/index';
+import { processMessage } from '../agent';   // ✅ fixed import
 
 export async function handleTelegramUpdate(update: any) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;

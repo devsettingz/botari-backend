@@ -1,8 +1,8 @@
 import express from 'express';
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
-import { processMessage } from '../../../botari-agent/src/index';
-import { verifyToken } from '../middleware/verifyToken'; // ✅ add middleware
+import { processMessage } from '../agent';   // ✅ fixed import
+import { verifyToken } from '../middleware/verifyToken';
 
 dotenv.config({ path: __dirname + '/../.env' });
 

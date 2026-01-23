@@ -16,39 +16,41 @@ import telegramRoutes from './routes/telegram';
 import subscriptionRoutes from './routes/subscriptions';
 import paymentRoutes from './routes/payments';
 import paymentsWebhookRoutes from './routes/payments-webhook';
-import { processMessage } from '../../botari-agent/src/index';
 
-// Load env explicitly
+// ✅ Now importing from your new local agent folder
+import { processMessage } from './agent';
+
+// Load environment variables (works locally, Render injects automatically)
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-// Health check
+// Health check route
 app.get('/', (req, res) => {
   res.json({ message: 'Botari API is running!' });
 });
 
-// Auth routes (register + login)
+// Auth routes
 app.use('/api/auth', authRoutes);
 
-// Conversations routes (create new chat)
+// Conversations routes
 app.use('/api/conversations', conversationRoutes);
 
-// Conversations list routes (all chats for a business)
+// Conversations list routes
 app.use('/api/conversations/list', conversationListRoutes);
 
-// Messages routes (save + reply)
+// Messages routes
 app.use('/api/messages', messageRoutes);
 
-// Messages history routes (fetch chat logs)
+// Messages history routes
 app.use('/api/messages/history', messageHistoryRoutes);
 
-// Dashboard routes (summary stats + trends, protected by JWT)
+// Dashboard routes
 app.use('/api/dashboard', dashboardRoutes);
 
-// Admin routes (owner-only, protected by JWT + role)
+// Admin routes
 app.use('/api/admin', adminRoutes);
 
 // WhatsApp webhook routes
@@ -57,22 +59,23 @@ app.use('/whatsapp', whatsappRoutes);
 // Telegram webhook routes
 app.use('/telegram', telegramRoutes);
 
-// Subscription routes (plan management)
+// Subscription routes
 app.use('/api/subscriptions', subscriptionRoutes);
 
-// Payment routes (billing + transactions)
+// Payment routes
 app.use('/api/payments', paymentRoutes);
 
-// Payment webhook routes (Stripe, Paystack, Flutterwave, etc.)
+// Payment webhook routes
 app.use('/api/payments/webhook', paymentsWebhookRoutes);
 
-// Direct agent reply (legacy route)
+// Direct agent reply (self-contained now)
 app.post('/api/messages-direct', async (req, res) => {
   const { text } = req.body;
   const reply = await processMessage(text);
   res.json({ reply });
 });
 
+// ✅ Use Render’s injected PORT
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Botari API running on port ${PORT}`);

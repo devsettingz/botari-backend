@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { processMessage } from '../../../botari-agent/src/index';
+import { processMessage } from '../agent';   // ✅ fixed import
 
 const router = Router();
 

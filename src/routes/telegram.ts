@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
-import { processMessage } from '../../../botari-agent/src/index';
+import { processMessage } from '../agent';   // ✅ fixed import
 
 const router = Router();
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -13,8 +13,7 @@ router.post('/webhook', async (req, res) => {
       const chatId = update.message.chat.id;
       const text =
         update.message.text ||
-        update.message.caption || // handle photo captions
-        '';
+        update.message.caption || '';
 
       if (text.trim()) {
         console.log(`📩 Telegram message from ${chatId}: ${text}`);
