@@ -48,7 +48,7 @@ router.get('/webhook', (req, res) => {
   }
 });
 
-// Incoming message handler - FIXED: Use correct processMessage signature
+// Incoming message handler
 router.post('/webhook', async (req, res) => {
   const body = req.body;
 
@@ -63,20 +63,16 @@ router.post('/webhook', async (req, res) => {
 
       console.log(`WhatsApp message from ${from}: ${text}`);
 
-      // FIXED: Call processMessage with all required arguments
-      // Arguments: text, userId, employeeType, businessContext, channel
-      const result = await processMessage(
-        text || '',                    // text: string
-        from,                          // userId: string (phone number)
-        'amina',                       // employeeType: 'amina' | 'stan'
-        { business_id: 1, business_name: 'Unknown' },  // businessContext
-        'whatsapp'                     // channel: string
-      );
-      
-      const reply = result.reply;
-      console.log(`Reply to ${from}: ${reply}`);
-      
-      // TODO: Actually send the reply back via WhatsApp API
+      // CORRECTED: processMessage expects (text, userId, employeeType, businessContext, channel)
+      try {
+        const result = await processMessage(text || '', from, 'amina', { business_id: 1, business_name: 'Unknown' }, 'whatsapp');
+        const reply = result.reply;
+        console.log(`Reply to ${from}: ${reply}`);
+        
+        // TODO: Send reply back via WhatsApp API
+      } catch (err) {
+        console.error('Error processing message:', err);
+      }
     }
 
     res.sendStatus(200);
