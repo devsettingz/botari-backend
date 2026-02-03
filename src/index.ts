@@ -19,8 +19,8 @@ import paymentsWebhookRoutes from './routes/payments-webhook';
 import callsRoutes from './routes/calls';
 import employeeRoutes from './routes/employees';
 
-// Import agent
-import { processMessage } from './agent';
+// Import agent from agent/index.ts (the folder)
+import { processMessage } from './agent/index';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -72,16 +72,20 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/payments/webhook', paymentsWebhookRoutes);
 app.use('/api/calls', callsRoutes);
 
-// Direct agent test endpoint - FIXED: Correct argument count and return type
+// Direct agent test endpoint - FIXED: Use all 5 arguments
 app.post('/api/messages-direct', async (req, res) => {
   const { text, employee } = req.body;
   try {
-    // FIXED: processMessage likely takes (message, userId, employeeId) or similar
-    // Check your agent.ts to confirm, but assuming it returns string directly
-    const reply = await processMessage(text, employee || 'amina');
+    // FIXED: processMessage takes 5 arguments
+    const result = await processMessage(
+      text,                           // 1. text (string)
+      'anonymous',                    // 2. userId (string)
+      employee || 'amina',           // 3. employeeType ('amina' | 'stan')
+      {},                            // 4. businessContext (object)
+      'whatsapp'                     // 5. channel (string)
+    );
     
-    // FIXED: reply is likely a string, not an object with .reply property
-    res.json({ reply: reply });
+    res.json({ reply: result.reply });
   } catch (err) {
     console.error('Agent error:', err);
     res.status(500).json({ error: 'Agent error' });
