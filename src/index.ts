@@ -19,14 +19,11 @@ import paymentsWebhookRoutes from './routes/payments-webhook';
 import callsRoutes from './routes/calls';
 import employeeRoutes from './routes/employees';
 
-// Import agent module (default export)
-import agent from './agent/index';
-
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
-// CORS - CRITICAL FIX: Allow your Vercel frontend
+// CORS
 const corsOptions = {
   origin: [
     'https://botari-frontend.vercel.app',
@@ -51,7 +48,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Test endpoint for CORS
+// Test endpoint
 app.get('/api/test', (req, res) => {
   res.json({ message: 'CORS is working!' });
 });
@@ -72,26 +69,6 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/payments/webhook', paymentsWebhookRoutes);
 app.use('/api/calls', callsRoutes);
 
-// Direct agent test endpoint - FIXED: Use agent.processMessage with correct signature
-app.post('/api/messages-direct', async (req, res) => {
-  const { text, employee } = req.body;
-  try {
-    // Use agent.processMessage which has 5 arguments
-    const result = await agent.processMessage(
-      text,                           // 1. text
-      'anonymous',                    // 2. userId
-      employee || 'amina',           // 3. employeeType
-      {},                            // 4. businessContext
-      'whatsapp'                     // 5. channel
-    );
-    
-    res.json({ reply: result.reply });
-  } catch (err) {
-    console.error('Agent error:', err);
-    res.status(500).json({ error: 'Agent error' });
-  }
-});
-
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found', path: req.path });
@@ -109,6 +86,5 @@ if (require.main === module) {
   const PORT = process.env.PORT || 4000;
   app.listen(PORT, () => {
     console.log(`🚀 Botari API running on port ${PORT}`);
-    console.log(`📍 CORS enabled for: ${corsOptions.origin.join(', ')}`);
   });
 }
