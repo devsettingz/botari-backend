@@ -10,8 +10,6 @@ router.post('/connect', verifyToken, async (req: any, res: any) => {
     const businessId = req.userId;
     console.log('WhatsApp connection requested for business:', businessId);
     
-    // TODO: Implement actual WhatsApp Web.js or Business API connection
-    // For now, return a message that it's coming soon
     res.status(501).json({ 
       error: 'WhatsApp integration coming Thursday! Contact support@botari.ai to get early access.',
       status: 'coming_soon'
@@ -25,9 +23,6 @@ router.post('/connect', verifyToken, async (req: any, res: any) => {
 // GET /api/whatsapp/status - Check WhatsApp connection status
 router.get('/status', verifyToken, async (req: any, res: any) => {
   try {
-    const businessId = req.userId;
-    
-    // TODO: Check actual connection status from database
     res.json({ 
       connected: false,
       status: 'disconnected',
@@ -53,7 +48,7 @@ router.get('/webhook', (req, res) => {
   }
 });
 
-// Incoming message handler
+// Incoming message handler - FIXED: Use correct processMessage signature
 router.post('/webhook', async (req, res) => {
   const body = req.body;
 
@@ -68,10 +63,20 @@ router.post('/webhook', async (req, res) => {
 
       console.log(`WhatsApp message from ${from}: ${text}`);
 
-      const reply = await processMessage(text);
-
-      // TODO: Send reply back via WhatsApp API (Twilio or Meta)
+      // FIXED: Call processMessage with all required arguments
+      // Arguments: text, userId, employeeType, businessContext, channel
+      const result = await processMessage(
+        text || '',                    // text: string
+        from,                          // userId: string (phone number)
+        'amina',                       // employeeType: 'amina' | 'stan'
+        { business_id: 1, business_name: 'Unknown' },  // businessContext
+        'whatsapp'                     // channel: string
+      );
+      
+      const reply = result.reply;
       console.log(`Reply to ${from}: ${reply}`);
+      
+      // TODO: Actually send the reply back via WhatsApp API
     }
 
     res.sendStatus(200);
