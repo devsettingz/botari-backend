@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -30,7 +30,7 @@ const app = express();
 const corsOptions = {
   origin: [
     'https://botari-frontend.vercel.app',
-    'https://botari-ai.vercel.app', // Add any other Vercel URLs you might have
+    'https://botari-ai.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000'
   ],
@@ -40,7 +40,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json()); // Built-in express json parser (replaces body-parser)
+app.use(express.json());
 
 // Health check
 app.get('/', (req, res) => {
