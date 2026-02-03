@@ -1,7 +1,43 @@
 import { Router } from 'express';
-import { processMessage } from '../agent';   // ✅ fixed import
+import { processMessage } from '../agent';
+import { verifyToken } from '../middleware/verifyToken';
 
 const router = Router();
+
+// POST /api/whatsapp/connect - Start WhatsApp connection
+router.post('/connect', verifyToken, async (req: any, res: any) => {
+  try {
+    const businessId = req.userId;
+    console.log('WhatsApp connection requested for business:', businessId);
+    
+    // TODO: Implement actual WhatsApp Web.js or Business API connection
+    // For now, return a message that it's coming soon
+    res.status(501).json({ 
+      error: 'WhatsApp integration coming Thursday! Contact support@botari.ai to get early access.',
+      status: 'coming_soon'
+    });
+  } catch (err: any) {
+    console.error('WhatsApp connect error:', err);
+    res.status(500).json({ error: 'Failed to start WhatsApp connection' });
+  }
+});
+
+// GET /api/whatsapp/status - Check WhatsApp connection status
+router.get('/status', verifyToken, async (req: any, res: any) => {
+  try {
+    const businessId = req.userId;
+    
+    // TODO: Check actual connection status from database
+    res.json({ 
+      connected: false,
+      status: 'disconnected',
+      message: 'WhatsApp not connected. Feature launches Thursday!'
+    });
+  } catch (err: any) {
+    console.error('WhatsApp status error:', err);
+    res.status(500).json({ error: 'Failed to check WhatsApp status' });
+  }
+});
 
 // Webhook verification (for WhatsApp Business API)
 router.get('/webhook', (req, res) => {
