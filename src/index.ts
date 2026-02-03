@@ -19,8 +19,8 @@ import paymentsWebhookRoutes from './routes/payments-webhook';
 import callsRoutes from './routes/calls';
 import employeeRoutes from './routes/employees';
 
-// Import agent from agent/index.ts (the folder)
-import { processMessage } from './agent/index';
+// Import agent module (default export)
+import agent from './agent/index';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -72,17 +72,17 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/payments/webhook', paymentsWebhookRoutes);
 app.use('/api/calls', callsRoutes);
 
-// Direct agent test endpoint - FIXED: Use all 5 arguments
+// Direct agent test endpoint - FIXED: Use agent.processMessage with correct signature
 app.post('/api/messages-direct', async (req, res) => {
   const { text, employee } = req.body;
   try {
-    // FIXED: processMessage takes 5 arguments
-    const result = await processMessage(
-      text,                           // 1. text (string)
-      'anonymous',                    // 2. userId (string)
-      employee || 'amina',           // 3. employeeType ('amina' | 'stan')
-      {},                            // 4. businessContext (object)
-      'whatsapp'                     // 5. channel (string)
+    // Use agent.processMessage which has 5 arguments
+    const result = await agent.processMessage(
+      text,                           // 1. text
+      'anonymous',                    // 2. userId
+      employee || 'amina',           // 3. employeeType
+      {},                            // 4. businessContext
+      'whatsapp'                     // 5. channel
     );
     
     res.json({ reply: result.reply });
