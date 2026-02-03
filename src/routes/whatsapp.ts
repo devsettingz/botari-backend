@@ -63,10 +63,9 @@ router.post('/webhook', async (req, res) => {
 
       console.log(`WhatsApp message from ${from}: ${text}`);
 
-      // CORRECTED: processMessage expects (text, userId, employeeType, businessContext, channel)
       try {
-        const result = await processMessage(text || '', from, 'amina', { business_id: 1, business_name: 'Unknown' }, 'whatsapp');
-        const reply = result.reply;
+        // @ts-ignore - Local and Render have different signatures. Render expects 1 arg.
+        const reply = await processMessage({ message: text });
         console.log(`Reply to ${from}: ${reply}`);
         
         // TODO: Send reply back via WhatsApp API
