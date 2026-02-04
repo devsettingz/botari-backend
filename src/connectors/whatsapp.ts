@@ -1,30 +1,26 @@
-import makeWASocket, {
-  DisconnectReason,
-  useMultiFileAuthState,
-  AnyMessageContent
-} from '@adiwajshing/baileys';
+import makeWASocket, { DisconnectReason, useMultiFileAuthState } from '@adiwajshing/baileys';
 import { Boom } from '@hapi/boom';
-import { processMessage } from '../agent';   // ✅ fixed import
+import { Pool } from 'pg';
+import { routeMessage } from '../agent';
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+const PHONE_TO_BUSINESS = new Map<string, number>();
 
 export async function startWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-
-  const sock = makeWASocket({
-    auth: state,
-    printQRInTerminal: true
-  });
+  const sock = makeWASocket({ auth: state, printQRInTerminal: true });
 
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect } = update;
     if (connection === 'close') {
-      const shouldReconnect =
-        (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('connection closed, reconnecting:', shouldReconnect);
-      if (shouldReconnect) {
-        startWhatsApp();
-      }
+      const shouldReconnect = (lastDisconnect?.error as Boom)?.output?.statusCode !== DisconnectReason.loggedOut;
+      if (shouldReconnect) startWhatsApp();
     } else if (connection === 'open') {
-      console.log('✅ WhatsApp connection established');
+      console.log('✅ WhatsApp connected');
     }
   });
 
@@ -35,19 +31,28 @@ export async function startWhatsApp() {
     if (!msg || !msg.message || msg.key.fromMe) return;
 
     const sender = msg.key.remoteJid!;
-    const text =
-      msg.message.conversation ||
-      msg.message.extendedTextMessage?.text ||
-      msg.message?.imageMessage?.caption ||
-      '';
+    const text = msg.message.conversation || 
+                 msg.message.extendedTextMessage?.text || 
+                 msg.message?.imageMessage?.caption || '';
 
-    if (text.trim()) {
-      console.log(`📩 WhatsApp message from ${sender}: ${text}`);
+    if (!text.trim()) return;
 
-      const reply = await processMessage(text);
+    console.log(`📩 WhatsApp from ${sender}: ${text}`);
 
+    try {
+      const businessId = PHONE_TO_BUSINESS.get(sender) || 1;
+      const reply = await routeMessage(text, sender, 'whatsapp', businessId);
       await sock.sendMessage(sender, { text: reply });
-      console.log(`🤖 Reply sent to ${sender}: ${reply}`);
+      console.log(`✅ Replied: ${reply.substring(0, 50)}`);
+    } catch (error) {
+      console.error('❌ WhatsApp error:', error);
+      await sock.sendMessage(sender, { 
+        text: "Sorry, I'm having technical difficulties. Please try again shortly." 
+      });
     }
   });
+}
+
+export function linkPhoneToBusiness(phone: string, businessId: number) {
+  PHONE_TO_BUSINESS.set(phone, businessId);
 }

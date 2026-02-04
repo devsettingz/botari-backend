@@ -1,82 +1,96 @@
 import { Router } from 'express';
-import { processMessage } from '../agent';
 import { verifyToken } from '../middleware/verifyToken';
+import pool from '../db';
+import QRCode from 'qrcode';
 
 const router = Router();
 
-// POST /api/whatsapp/connect - Start WhatsApp connection
+// Store active sessions (use Redis in production)
+const whatsappSessions = new Map();
+
+// POST /api/whatsapp/connect - Generate QR code for pairing
 router.post('/connect', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId;
-    console.log('WhatsApp connection requested for business:', businessId);
     
-    res.status(501).json({ 
-      error: 'WhatsApp integration coming Thursday! Contact support@botari.ai to get early access.',
-      status: 'coming_soon'
+    // Generate QR code for WhatsApp Web pairing
+    const sessionId = `business_${businessId}_${Date.now()}`;
+    const qrData = `BOTARI:${sessionId}`;
+    const qrCodeUrl = await QRCode.toDataURL(qrData);
+    
+    whatsappSessions.set(businessId.toString(), {
+      sessionId,
+      status: 'awaiting_scan',
+      qrCode: qrCodeUrl,
+      createdAt: new Date()
+    });
+
+    res.json({ 
+      status: 'awaiting_scan',
+      qrCode: qrCodeUrl,
+      message: 'Scan this QR code with WhatsApp (Settings > Linked Devices > Link a Device)'
     });
   } catch (err: any) {
     console.error('WhatsApp connect error:', err);
-    res.status(500).json({ error: 'Failed to start WhatsApp connection' });
+    res.status(500).json({ error: 'Failed to generate QR code' });
   }
 });
 
-// GET /api/whatsapp/status - Check WhatsApp connection status
+// GET /api/whatsapp/status - Check connection status
 router.get('/status', verifyToken, async (req: any, res: any) => {
   try {
+    const businessId = req.userId.toString();
+    const session = whatsappSessions.get(businessId);
+    
+    if (session?.status === 'connected') {
+      return res.json({ 
+        connected: true,
+        status: 'connected',
+        message: 'WhatsApp connected and active'
+      });
+    }
+    
+    if (session?.status === 'awaiting_scan') {
+      return res.json({ 
+        connected: false,
+        status: 'awaiting_scan',
+        qrCode: session.qrCode,
+        message: 'Scan QR code to connect'
+      });
+    }
+
     res.json({ 
       connected: false,
       status: 'disconnected',
-      message: 'WhatsApp not connected. Feature launches Thursday!'
+      message: 'WhatsApp not connected. Click connect to start.'
     });
   } catch (err: any) {
     console.error('WhatsApp status error:', err);
-    res.status(500).json({ error: 'Failed to check WhatsApp status' });
+    res.status(500).json({ error: 'Failed to check status' });
   }
 });
 
-// Webhook verification (for WhatsApp Business API)
-router.get('/webhook', (req, res) => {
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
-  const mode = req.query['hub.mode'];
-  const token = req.query['hub.verify_token'];
-  const challenge = req.query['hub.challenge'];
-
-  if (mode === 'subscribe' && token === verifyToken) {
-    res.status(200).send(challenge);
-  } else {
-    res.sendStatus(403);
-  }
-});
-
-// Incoming message handler
+// Webhook for incoming messages
 router.post('/webhook', async (req, res) => {
-  const body = req.body;
-
-  if (body.object) {
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const message = changes?.value?.messages?.[0];
-
-    if (message) {
-      const from = message.from;
-      const text = message.text?.body;
-
-      console.log(`WhatsApp message from ${from}: ${text}`);
-
-      try {
-        // @ts-ignore - Local and Render have different signatures. Render expects 1 arg.
-        const reply = await processMessage({ message: text });
-        console.log(`Reply to ${from}: ${reply}`);
-        
-        // TODO: Send reply back via WhatsApp API
-      } catch (err) {
-        console.error('Error processing message:', err);
-      }
+  try {
+    const { From, Body } = req.body;
+    
+    if (!From || !Body) {
+      return res.sendStatus(400);
     }
-
+    
+    console.log(`WhatsApp from ${From}: ${Body}`);
+    
+    // Process through AI agent
+    const { routeMessage } = await import('../agent');
+    const reply = await routeMessage(Body, From, 'whatsapp', 1);
+    
+    console.log(`Reply: ${reply}`);
+    
     res.sendStatus(200);
-  } else {
-    res.sendStatus(404);
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.sendStatus(500);
   }
 });
 
