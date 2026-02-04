@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import fetch from 'node-fetch';
-import { processMessage } from '../agent';   // ✅ fixed import
+import { routeMessage } from '../agent';   // ✅ Changed to routeMessage
 
 const router = Router();
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -11,14 +11,13 @@ router.post('/webhook', async (req, res) => {
 
     if (update.message) {
       const chatId = update.message.chat.id;
-      const text =
-        update.message.text ||
-        update.message.caption || '';
+      const text = update.message.text || update.message.caption || '';
 
       if (text.trim()) {
         console.log(`📩 Telegram message from ${chatId}: ${text}`);
 
-        const reply = await processMessage(text);
+        // ✅ Fixed: Use routeMessage with 4 arguments like whatsapp.ts
+        const reply = await routeMessage(text, chatId.toString(), 'telegram', 1);
 
         await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
           method: 'POST',

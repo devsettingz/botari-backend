@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { processMessage } from '../agent';   // ✅ fixed import
+import { routeMessage } from '../agent';   // ✅ Changed to routeMessage
 
 export async function handleTelegramUpdate(update: any) {
   const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -10,11 +10,12 @@ export async function handleTelegramUpdate(update: any) {
 
   if (update.message) {
     const chatId = update.message.chat.id;
-    const text = update.message.text;
+    const text = update.message.text || update.message.caption || '';
 
     console.log(`📩 Telegram message from ${chatId}: ${text}`);
 
-    const reply = await processMessage(text);
+    // ✅ Fixed: Use routeMessage with 4 arguments
+    const reply = await routeMessage(text, chatId.toString(), 'telegram', 1);
 
     await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
       method: 'POST',
