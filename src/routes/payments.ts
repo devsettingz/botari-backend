@@ -37,14 +37,14 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
 
     const employee = empResult.rows[0];
 
-    // Create subscription record
+    // Create subscription record - FIXED: Added 'plan' column
     let subscriptionId;
     try {
       const subResult = await pool.query(
-        `INSERT INTO subscriptions (business_id, employee_id, status, amount, currency, provider) 
-         VALUES ($1, $2, 'pending', $3, 'NGN', 'paystack') 
+        `INSERT INTO subscriptions (business_id, employee_id, plan, status, amount, currency, provider) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7) 
          RETURNING id`,
-        [businessId, employee_id, amount]
+        [businessId, employee_id, 'monthly', 'pending', amount, 'NGN', 'paystack']
       );
       subscriptionId = subResult.rows[0].id;
       console.log('Subscription created:', subscriptionId);
@@ -77,7 +77,7 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
             Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
             'Content-Type': 'application/json'
           },
-          timeout: 10000 // 10 second timeout
+          timeout: 10000
         }
       );
 
