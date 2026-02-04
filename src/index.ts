@@ -23,7 +23,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
-// CORS
+// CORS - Fixed spacing issues in URLs
 const corsOptions = {
   origin: [
     'https://botari-frontend.vercel.app',
@@ -77,7 +77,7 @@ app.use((req, res) => {
 // Error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+  res.status(500).json({ error: 'Internal server error', message: err.message });
 });
 
 export { app };
