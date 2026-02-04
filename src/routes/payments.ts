@@ -37,7 +37,7 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
 
     const employee = empResult.rows[0];
 
-    // Create subscription record - FIXED: Added 'plan' column
+    // Create subscription record
     let subscriptionId;
     try {
       const subResult = await pool.query(
@@ -57,14 +57,14 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
     try {
       const paystackData = {
         email: email || req.user?.email || 'customer@business.com',
-        amount: amount.toString(), // Paystack expects string
+        amount: amount.toString(),
         metadata: {
           subscription_id: subscriptionId,
           business_id: businessId,
           employee_id: employee_id,
           employee_name: employee.display_name
         },
-        callback_url: `${process.env.FRONTEND_URL || 'https://botari-frontend.vercel.app'}/payment/verify`
+        callback_url: `https://botari-frontend.vercel.app/payment/verify`
       };
 
       console.log('Calling Paystack with:', paystackData);
@@ -84,7 +84,6 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
       console.log('Paystack response:', response.data);
 
       if (response.data.status && response.data.data) {
-        // Update subscription with reference
         await pool.query(
           'UPDATE subscriptions SET provider_ref = $1 WHERE id = $2',
           [response.data.data.reference, subscriptionId]
@@ -101,7 +100,6 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
     } catch (paystackErr: any) {
       console.error('Paystack API error:', paystackErr.response?.data || paystackErr.message);
       
-      // Update subscription to failed
       await pool.query(
         "UPDATE subscriptions SET status = 'failed' WHERE id = $1",
         [subscriptionId]
@@ -142,7 +140,6 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
     if (data.status === 'success') {
       const metadata = data.metadata;
       
-      // Update subscription
       await pool.query(
         `UPDATE subscriptions 
          SET status = 'active', activated_at = NOW(), expires_at = NOW() + INTERVAL '30 days'
@@ -150,7 +147,6 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
         [metadata.subscription_id]
       );
 
-      // Record payment
       await pool.query(
         `INSERT INTO payments (business_id, employee_id, amount, currency, provider, status, provider_ref, metadata)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
@@ -166,7 +162,6 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
         ]
       );
 
-      // Hire employee
       await pool.query(
         `INSERT INTO business_employees (business_id, employee_id, is_active, hired_at, assigned_channel)
          VALUES ($1, $2, true, NOW(), 'whatsapp')
