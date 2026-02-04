@@ -5,21 +5,27 @@ import axios from 'axios';
 
 const router = Router();
 
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
-const PAYSTACK_BASE = 'https://api.paystack.co';
+// Debug: Log environment check on startup
+console.log('Payments route loaded. Paystack key exists:', !!process.env.PAYSTACK_SECRET_KEY);
 
-// Initialize Paystack transaction
 router.post('/initialize', verifyToken, async (req: any, res: any) => {
-  const { employee_id, amount, email } = req.body;
-  const businessId = req.user?.business_id || req.userId;
-  const userId = req.user?.id || req.userId;
-
-  if (!businessId) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
-    // Get employee details
+    const { employee_id, amount, email } = req.body;
+    const businessId = req.user?.business_id || req.userId;
+    
+    console.log('Payment init started:', { employee_id, amount, businessId });
+
+    // Validation
+    if (!employee_id || !amount) {
+      return res.status(400).json({ error: 'Missing employee_id or amount' });
+    }
+
+    if (!process.env.PAYSTACK_SECRET_KEY) {
+      console.error('PAYSTACK_SECRET_KEY not configured');
+      return res.status(500).json({ error: 'Payment gateway not configured' });
+    }
+
+    // Get employee
     const empResult = await pool.query(
       'SELECT * FROM ai_employees WHERE id = $1',
       [employee_id]
@@ -31,77 +37,102 @@ router.post('/initialize', verifyToken, async (req: any, res: any) => {
 
     const employee = empResult.rows[0];
 
-    // Create pending subscription record
-    const subResult = await pool.query(
-      `INSERT INTO subscriptions (business_id, employee_id, status, amount, currency, provider) 
-       VALUES ($1, $2, 'pending', $3, 'NGN', 'paystack') 
-       RETURNING id`,
-      [businessId, employee_id, amount]
-    );
-    
-    const subscriptionId = subResult.rows[0].id;
+    // Create subscription record
+    let subscriptionId;
+    try {
+      const subResult = await pool.query(
+        `INSERT INTO subscriptions (business_id, employee_id, status, amount, currency, provider) 
+         VALUES ($1, $2, 'pending', $3, 'NGN', 'paystack') 
+         RETURNING id`,
+        [businessId, employee_id, amount]
+      );
+      subscriptionId = subResult.rows[0].id;
+      console.log('Subscription created:', subscriptionId);
+    } catch (dbErr: any) {
+      console.error('Database error creating subscription:', dbErr.message);
+      return res.status(500).json({ error: 'Database error', details: dbErr.message });
+    }
 
-    // Initialize Paystack transaction
-    const response = await axios.post(
-      `${PAYSTACK_BASE}/transaction/initialize`,
-      {
+    // Call Paystack
+    try {
+      const paystackData = {
         email: email || req.user?.email || 'customer@business.com',
-        amount: amount,
+        amount: amount.toString(), // Paystack expects string
         metadata: {
           subscription_id: subscriptionId,
           business_id: businessId,
           employee_id: employee_id,
-          user_id: userId,
-          custom_fields: [
-            {
-              display_name: "Employee",
-              variable_name: "employee_name",
-              value: employee.display_name
-            }
-          ]
+          employee_name: employee.display_name
         },
-        callback_url: `${process.env.FRONTEND_URL}/payment/verify`
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+        callback_url: `${process.env.FRONTEND_URL || 'https://botari-frontend.vercel.app'}/payment/verify`
+      };
 
-    if (response.data.status) {
-      // Update subscription with reference
-      await pool.query(
-        'UPDATE subscriptions SET provider_ref = $1 WHERE id = $2',
-        [response.data.data.reference, subscriptionId]
+      console.log('Calling Paystack with:', paystackData);
+
+      const response = await axios.post(
+        'https://api.paystack.co/transaction/initialize',
+        paystackData,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10 second timeout
+        }
       );
 
-      res.json({
-        authorization_url: response.data.data.authorization_url,
-        reference: response.data.data.reference,
-        subscription_id: subscriptionId
+      console.log('Paystack response:', response.data);
+
+      if (response.data.status && response.data.data) {
+        // Update subscription with reference
+        await pool.query(
+          'UPDATE subscriptions SET provider_ref = $1 WHERE id = $2',
+          [response.data.data.reference, subscriptionId]
+        );
+
+        return res.json({
+          authorization_url: response.data.data.authorization_url,
+          reference: response.data.data.reference,
+          subscription_id: subscriptionId
+        });
+      } else {
+        throw new Error(response.data.message || 'Paystack returned invalid response');
+      }
+    } catch (paystackErr: any) {
+      console.error('Paystack API error:', paystackErr.response?.data || paystackErr.message);
+      
+      // Update subscription to failed
+      await pool.query(
+        "UPDATE subscriptions SET status = 'failed' WHERE id = $1",
+        [subscriptionId]
+      );
+      
+      return res.status(500).json({ 
+        error: 'Paystack error', 
+        details: paystackErr.response?.data?.message || paystackErr.message 
       });
-    } else {
-      throw new Error('Paystack initialization failed');
     }
 
   } catch (err: any) {
-    console.error('Payment initialization error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to initialize payment' });
+    console.error('Unexpected payment error:', err);
+    return res.status(500).json({ error: 'Payment initialization failed', details: err.message });
   }
 });
 
-// Verify Paystack transaction
+// Verify payment
 router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
-  const { reference } = req.params;
-  
   try {
+    const { reference } = req.params;
+    
+    if (!reference) {
+      return res.status(400).json({ error: 'No reference provided' });
+    }
+
     const response = await axios.get(
-      `${PAYSTACK_BASE}/transaction/verify/${reference}`,
+      `https://api.paystack.co/transaction/verify/${reference}`,
       {
         headers: {
-          Authorization: `Bearer ${PAYSTACK_SECRET}`
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`
         }
       }
     );
@@ -109,9 +140,9 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
     const { data } = response.data;
     
     if (data.status === 'success') {
-      const { metadata } = data;
+      const metadata = data.metadata;
       
-      // Update subscription to active
+      // Update subscription
       await pool.query(
         `UPDATE subscriptions 
          SET status = 'active', activated_at = NOW(), expires_at = NOW() + INTERVAL '30 days'
@@ -135,7 +166,7 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
         ]
       );
 
-      // Auto-hire the employee
+      // Hire employee
       await pool.query(
         `INSERT INTO business_employees (business_id, employee_id, is_active, hired_at, assigned_channel)
          VALUES ($1, $2, true, NOW(), 'whatsapp')
@@ -144,18 +175,18 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
         [metadata.business_id, metadata.employee_id]
       );
 
-      res.json({ 
+      return res.json({ 
         status: 'success', 
-        message: 'Payment successful! Employee is now active.',
+        message: 'Payment successful! Employee activated.',
         employee_id: metadata.employee_id
       });
     } else {
       await pool.query(
-        'UPDATE subscriptions SET status = $1 WHERE provider_ref = $2',
-        [data.status, reference]
+        "UPDATE subscriptions SET status = 'failed' WHERE provider_ref = $1",
+        [reference]
       );
       
-      res.status(400).json({ 
+      return res.status(400).json({ 
         status: 'failed', 
         message: 'Payment verification failed' 
       });
@@ -163,43 +194,8 @@ router.get('/verify/:reference', verifyToken, async (req: any, res: any) => {
 
   } catch (err: any) {
     console.error('Verification error:', err.response?.data || err.message);
-    res.status(500).json({ error: 'Verification failed' });
+    return res.status(500).json({ error: 'Verification failed' });
   }
-});
-
-// Paystack Webhook (for async updates)
-router.post('/webhook', async (req, res) => {
-  const event = req.body;
-  
-  if (event.event === 'charge.success') {
-    const { data } = event;
-    const metadata = data.metadata;
-    
-    try {
-      // Activate subscription
-      await pool.query(
-        `UPDATE subscriptions 
-         SET status = 'active', activated_at = NOW(), expires_at = NOW() + INTERVAL '30 days'
-         WHERE provider_ref = $1`,
-        [data.reference]
-      );
-
-      // Ensure employee is hired
-      await pool.query(
-        `INSERT INTO business_employees (business_id, employee_id, is_active, hired_at)
-         VALUES ($1, $2, true, NOW())
-         ON CONFLICT (business_id, employee_id) 
-         DO UPDATE SET is_active = true`,
-        [metadata.business_id, metadata.employee_id]
-      );
-
-      console.log(`✅ Payment successful for business ${metadata.business_id}`);
-    } catch (err) {
-      console.error('Webhook processing error:', err);
-    }
-  }
-
-  res.sendStatus(200);
 });
 
 export default router;
