@@ -1,89 +1,85 @@
-import express from 'express';
-import { Pool } from 'pg';
+import { Router } from 'express';
 import { verifyToken } from '../middleware/verifyToken';
+import pool from '../db';
 
-const router = express.Router();
+const router = Router();
 
-// Check if DATABASE_URL exists
-if (!process.env.DATABASE_URL) {
-  console.error('WARNING: DATABASE_URL not set');
-}
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-});
-
-// GET /api/employees/my-team
-router.get('/my-team', verifyToken, async (req: any, res: any) => {
-  const businessId = req.userId;
-  
+// Get all employees (marketplace)
+router.get('/', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT 
-        e.id,
-        e.name,
-        e.display_name,
-        e.employee_role,
-        e.description,
-        e.base_monthly_price,
-        e.supported_channels,
-        COALESCE(be.is_active, false) as is_hired,
-        be.hired_at
-       FROM ai_employees e
-       LEFT JOIN business_employees be ON e.id = be.employee_id AND be.business_id = $1
-       WHERE e.is_active = true
-       ORDER BY e.base_monthly_price`,
-      [businessId]
-    );
+    const result = await pool.query('SELECT * FROM ai_employees WHERE is_active = true');
     res.json(result.rows);
-  } catch (err: any) {
-    console.error('Error fetching team:', err);
-    res.status(500).json({ error: 'Failed to fetch team' });
+  } catch (err) {
+    console.error('Error fetching employees:', err);
+    res.status(500).json({ error: 'Failed to fetch employees' });
   }
 });
 
-// POST /api/employees/hire
-router.post('/hire', verifyToken, async (req: any, res: any) => {
-  const businessId = req.userId;
-  const { employeeName, channelType } = req.body;
-  
+// Get MY TEAM (hired employees) - FIXED FOR LAUNCH
+router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
-    // Get employee ID
-    const empResult = await pool.query(
-      'SELECT id FROM ai_employees WHERE name = $1',
-      [employeeName]
-    );
+    const businessId = req.userId || req.user?.business_id;
     
-    if (empResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Employee not found' });
+    if (!businessId) {
+      return res.status(401).json({ error: 'Business ID not found' });
     }
-    
-    const employeeId = empResult.rows[0].id;
-    
-    // Hire them
-    await pool.query(
-      `INSERT INTO business_employees (business_id, employee_id, config, assigned_channel, is_active)
-       VALUES ($1, $2, $3, $4, true)
-       ON CONFLICT (business_id, employee_id) 
-       DO UPDATE SET is_active = true, assigned_employee_id = $4`,
-      [businessId, employeeId, JSON.stringify({ hired_at: new Date() }), channelType || 'whatsapp']
+
+    console.log('Fetching team for business:', businessId);
+
+    // Get all employees hired by this business
+    const result = await pool.query(
+      `SELECT 
+        ae.id,
+        ae.display_name,
+        ae.employee_role,
+        ae.avatar_url,
+        ae.description,
+        ae.price_monthly,
+        ae.assigned_channel,
+        be.is_active as is_hired,
+        be.connection_status,
+        be.whatsapp_number,
+        be.hired_at,
+        s.status as subscription_status,
+        s.expires_at
+       FROM business_employees be
+       JOIN ai_employees ae ON be.employee_id = ae.id
+       LEFT JOIN subscriptions s ON be.employee_id = s.employee_id 
+         AND be.business_id = s.business_id 
+         AND s.status = 'active'
+       WHERE be.business_id = $1`,
+      [businessId]
     );
-    
-    // Assign to channel
-    await pool.query(
-      `INSERT INTO channels (business_id, channel_type, assigned_employee_id, is_active)
-       VALUES ($1, $2, $3, true)
-       ON CONFLICT (business_id, channel_type)
-       DO UPDATE SET assigned_employee_id = $3, is_active = true`,
-      [businessId, channelType || 'whatsapp', employeeId]
-    );
-    
-    res.json({ message: `Successfully hired ${employeeName}` });
-    
+
+    console.log('Team found:', result.rows.length, 'employees');
+    res.json(result.rows);
   } catch (err: any) {
-    console.error('Error hiring employee:', err);
-    res.status(500).json({ error: 'Failed to hire employee' });
+    console.error('Error fetching my team:', err);
+    res.status(500).json({ error: 'Failed to fetch team', details: err.message });
+  }
+});
+
+// Get transaction/payment history
+router.get('/payments/history', verifyToken, async (req: any, res: any) => {
+  try {
+    const businessId = req.userId || req.user?.business_id;
+    
+    const result = await pool.query(
+      `SELECT 
+        p.*,
+        ae.display_name as employee_name,
+        ae.avatar_url
+       FROM payments p
+       LEFT JOIN ai_employees ae ON p.employee_id = ae.id
+       WHERE p.business_id = $1
+       ORDER BY p.created_at DESC`,
+      [businessId]
+    );
+    
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching payments:', err);
+    res.status(500).json({ error: 'Failed to fetch payment history' });
   }
 });
 
