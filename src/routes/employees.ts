@@ -14,25 +14,23 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get MY HIRED TEAM - FIXED VERSION
+// Get MY HIRED TEAM - FIXED (removed avatar_url)
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
     
     if (!businessId) {
-      console.log('ERROR: No business ID in token');
       return res.status(401).json({ error: 'No business ID' });
     }
 
     console.log(`Fetching team for business: ${businessId}`);
 
-    // FIXED: Use LEFT JOIN to avoid missing rows if ai_employees has issues
+    // FIXED: Removed avatar_url and used LEFT JOIN
     const result = await pool.query(
       `SELECT 
-        be.employee_id as id,
+        ae.id,
         ae.display_name,
         ae.employee_role,
-        ae.avatar_url,
         ae.description,
         ae.price_monthly,
         ae.assigned_channel,
@@ -45,11 +43,10 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
       [businessId]
     );
 
-    console.log(`SUCCESS: Found ${result.rows.length} employees for business ${businessId}`);
+    console.log(`SUCCESS: Found ${result.rows.length} employees`);
     res.json(result.rows);
   } catch (err: any) {
     console.error('DATABASE ERROR in /my-team:', err.message);
-    // Return empty array instead of crashing
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -70,7 +67,6 @@ router.post('/hire', verifyToken, async (req: any, res: any) => {
 
     console.log(`Hiring employee ${employee_id} for business ${businessId}`);
 
-    // Insert into business_employees
     await pool.query(
       `INSERT INTO business_employees 
        (business_id, employee_id, is_active, connection_status, hired_at, updated_at)
