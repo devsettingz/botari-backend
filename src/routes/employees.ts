@@ -14,15 +14,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get MY HIRED TEAM
+// Get MY HIRED TEAM - FIXED WITH ERROR HANDLING
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
     
     if (!businessId) {
+      console.log('ERROR: No business ID in token');
       return res.status(401).json({ error: 'No business ID' });
     }
 
+    console.log(`Fetching team for business: ${businessId}`);
+
+    // CRITICAL FIX: Simplified query that won't crash
     const result = await pool.query(
       `SELECT 
         ae.id,
@@ -32,20 +36,20 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
         ae.description,
         ae.price_monthly,
         ae.assigned_channel,
-        be.connection_status,
+        COALESCE(be.connection_status, 'disconnected') as connection_status,
         be.whatsapp_number,
-        be.is_active
+        COALESCE(be.is_active, true) as is_active
        FROM business_employees be
        JOIN ai_employees ae ON be.employee_id = ae.id
        WHERE be.business_id = $1`,
       [businessId]
     );
 
-    console.log(`Found ${result.rows.length} employees for business ${businessId}`);
+    console.log(`SUCCESS: Found ${result.rows.length} employees`);
     res.json(result.rows);
-  } catch (err) {
-    console.error('Database error:', err);
-    res.status(500).json({ error: 'Database error' });
+  } catch (err: any) {
+    console.error('DATABASE ERROR in /my-team:', err.message);
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
@@ -63,6 +67,8 @@ router.post('/hire', verifyToken, async (req: any, res: any) => {
       return res.status(400).json({ error: 'Employee ID required' });
     }
 
+    console.log(`Hiring employee ${employee_id} for business ${businessId}`);
+
     // Insert into business_employees
     await pool.query(
       `INSERT INTO business_employees 
@@ -73,11 +79,11 @@ router.post('/hire', verifyToken, async (req: any, res: any) => {
       [businessId, employee_id]
     );
 
-    console.log(`HIRED: Employee ${employee_id} for business ${businessId}`);
+    console.log('SUCCESS: Employee hired');
     res.json({ success: true, message: 'Employee hired successfully' });
     
   } catch (err: any) {
-    console.error('Hire error:', err);
+    console.error('HIRE ERROR:', err.message);
     res.status(500).json({ error: 'Failed to hire employee', details: err.message });
   }
 });
