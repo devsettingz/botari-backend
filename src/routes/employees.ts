@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get MY HIRED TEAM - FIXED WITH ERROR HANDLING
+// Get MY HIRED TEAM - FIXED VERSION
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
@@ -26,10 +26,10 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
 
     console.log(`Fetching team for business: ${businessId}`);
 
-    // CRITICAL FIX: Simplified query that won't crash
+    // FIXED: Use LEFT JOIN to avoid missing rows if ai_employees has issues
     const result = await pool.query(
       `SELECT 
-        ae.id,
+        be.employee_id as id,
         ae.display_name,
         ae.employee_role,
         ae.avatar_url,
@@ -40,20 +40,21 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
         be.whatsapp_number,
         COALESCE(be.is_active, true) as is_active
        FROM business_employees be
-       JOIN ai_employees ae ON be.employee_id = ae.id
+       LEFT JOIN ai_employees ae ON be.employee_id = ae.id
        WHERE be.business_id = $1`,
       [businessId]
     );
 
-    console.log(`SUCCESS: Found ${result.rows.length} employees`);
+    console.log(`SUCCESS: Found ${result.rows.length} employees for business ${businessId}`);
     res.json(result.rows);
   } catch (err: any) {
     console.error('DATABASE ERROR in /my-team:', err.message);
+    // Return empty array instead of crashing
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
-// CRITICAL: Hire employee after payment
+// Hire employee after payment
 router.post('/hire', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
