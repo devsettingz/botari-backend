@@ -4,29 +4,26 @@ import pool from '../db';
 
 const router = Router();
 
-// Get all employees (marketplace)
+// Get available employees (marketplace)
 router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM ai_employees WHERE is_active = true');
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching employees:', err);
     res.status(500).json({ error: 'Failed to fetch employees' });
   }
 });
 
-// Get MY TEAM (hired employees) - FIXED FOR LAUNCH
+// Get MY HIRED TEAM - FIXED
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
     
     if (!businessId) {
-      return res.status(401).json({ error: 'Business ID not found' });
+      return res.status(401).json({ error: 'No business ID' });
     }
 
-    console.log('Fetching team for business:', businessId);
-
-    // Get all employees hired by this business
+    // CRITICAL FIX: Get ALL employees hired by this business
     const result = await pool.query(
       `SELECT 
         ae.id,
@@ -36,50 +33,38 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
         ae.description,
         ae.price_monthly,
         ae.assigned_channel,
-        be.is_active as is_hired,
         be.connection_status,
         be.whatsapp_number,
-        be.hired_at,
-        s.status as subscription_status,
-        s.expires_at
+        be.is_active
        FROM business_employees be
        JOIN ai_employees ae ON be.employee_id = ae.id
-       LEFT JOIN subscriptions s ON be.employee_id = s.employee_id 
-         AND be.business_id = s.business_id 
-         AND s.status = 'active'
        WHERE be.business_id = $1`,
       [businessId]
     );
 
-    console.log('Team found:', result.rows.length, 'employees');
+    console.log(`Found ${result.rows.length} employees for business ${businessId}`);
     res.json(result.rows);
-  } catch (err: any) {
-    console.error('Error fetching my team:', err);
-    res.status(500).json({ error: 'Failed to fetch team', details: err.message });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
-// Get transaction/payment history
+// Payment history
 router.get('/payments/history', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
-    
     const result = await pool.query(
-      `SELECT 
-        p.*,
-        ae.display_name as employee_name,
-        ae.avatar_url
-       FROM payments p
-       LEFT JOIN ai_employees ae ON p.employee_id = ae.id
-       WHERE p.business_id = $1
+      `SELECT p.*, ae.display_name as employee_name 
+       FROM payments p 
+       LEFT JOIN ai_employees ae ON p.employee_id = ae.id 
+       WHERE p.business_id = $1 
        ORDER BY p.created_at DESC`,
       [businessId]
     );
-    
     res.json(result.rows);
   } catch (err) {
-    console.error('Error fetching payments:', err);
-    res.status(500).json({ error: 'Failed to fetch payment history' });
+    res.status(500).json({ error: 'Failed to fetch payments' });
   }
 });
 
