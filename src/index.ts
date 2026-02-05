@@ -18,6 +18,7 @@ import paymentRoutes from './routes/payments';
 import paymentsWebhookRoutes from './routes/payments-webhook';
 import callsRoutes from './routes/calls';
 import employeeRoutes from './routes/employees';
+import businessRoutes from './routes/business'; // NEW: Botari Brain routes
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -62,6 +63,7 @@ app.use('/api/messages/history', messageHistoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/business', businessRoutes); // NEW: Business context & agent config
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/telegram', telegramRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
