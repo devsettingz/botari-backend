@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get MY HIRED TEAM - FIXED
+// Get MY HIRED TEAM
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
@@ -23,7 +23,6 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
       return res.status(401).json({ error: 'No business ID' });
     }
 
-    // CRITICAL FIX: Get ALL employees hired by this business
     const result = await pool.query(
       `SELECT 
         ae.id,
@@ -47,6 +46,39 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// CRITICAL: Hire employee after payment
+router.post('/hire', verifyToken, async (req: any, res: any) => {
+  try {
+    const businessId = req.userId || req.user?.business_id;
+    const { employee_id } = req.body;
+    
+    if (!businessId) {
+      return res.status(401).json({ error: 'Business ID not found' });
+    }
+
+    if (!employee_id) {
+      return res.status(400).json({ error: 'Employee ID required' });
+    }
+
+    // Insert into business_employees
+    await pool.query(
+      `INSERT INTO business_employees 
+       (business_id, employee_id, is_active, connection_status, hired_at, updated_at)
+       VALUES ($1, $2, true, 'disconnected', NOW(), NOW())
+       ON CONFLICT (business_id, employee_id) 
+       DO UPDATE SET is_active = true, updated_at = NOW()`,
+      [businessId, employee_id]
+    );
+
+    console.log(`HIRED: Employee ${employee_id} for business ${businessId}`);
+    res.json({ success: true, message: 'Employee hired successfully' });
+    
+  } catch (err: any) {
+    console.error('Hire error:', err);
+    res.status(500).json({ error: 'Failed to hire employee', details: err.message });
   }
 });
 
