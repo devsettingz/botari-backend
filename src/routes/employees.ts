@@ -4,17 +4,26 @@ import pool from '../db';
 
 const router = Router();
 
-// Get available employees (marketplace)
+// Get available employees (marketplace) - WITH FEATURES, COLORS, TIER
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM ai_employees WHERE is_active = true');
+    const result = await pool.query(`
+      SELECT 
+        id, name, display_name, employee_role, description, 
+        price_monthly, assigned_channel, is_active, color_theme, 
+        tier, icon_emoji, features
+      FROM ai_employees 
+      WHERE is_active = true
+      ORDER BY price_monthly ASC
+    `);
     res.json(result.rows);
   } catch (err) {
+    console.error('Error fetching employees:', err);
     res.status(500).json({ error: 'Failed to fetch employees' });
   }
 });
 
-// Get MY HIRED TEAM - FIXED (removed avatar_url)
+// Get MY HIRED TEAM - WITH FEATURES, COLORS, TIER, ICONS
 router.get('/my-team', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
@@ -25,21 +34,30 @@ router.get('/my-team', verifyToken, async (req: any, res: any) => {
 
     console.log(`Fetching team for business: ${businessId}`);
 
-    // FIXED: Removed avatar_url and used LEFT JOIN
     const result = await pool.query(
       `SELECT 
-        ae.id,
+        be.id,
+        ae.id as employee_id,
+        ae.name,
         ae.display_name,
         ae.employee_role,
         ae.description,
         ae.price_monthly,
         ae.assigned_channel,
+        ae.features,
+        ae.color_theme,
+        ae.tier,
+        ae.icon_emoji,
         COALESCE(be.connection_status, 'disconnected') as connection_status,
         be.whatsapp_number,
-        COALESCE(be.is_active, true) as is_active
+        COALESCE(be.is_active, true) as is_active,
+        be.hired_at,
+        be.messages_processed,
+        be.last_active
        FROM business_employees be
-       LEFT JOIN ai_employees ae ON be.employee_id = ae.id
-       WHERE be.business_id = $1`,
+       JOIN ai_employees ae ON be.employee_id = ae.id
+       WHERE be.business_id = $1 AND be.is_active = true
+       ORDER BY be.hired_at DESC`,
       [businessId]
     );
 
@@ -57,12 +75,8 @@ router.post('/hire', verifyToken, async (req: any, res: any) => {
     const businessId = req.userId || req.user?.business_id;
     const { employee_id } = req.body;
     
-    if (!businessId) {
-      return res.status(401).json({ error: 'Business ID not found' });
-    }
-
-    if (!employee_id) {
-      return res.status(400).json({ error: 'Employee ID required' });
+    if (!businessId || !employee_id) {
+      return res.status(400).json({ error: 'Business ID and Employee ID required' });
     }
 
     console.log(`Hiring employee ${employee_id} for business ${businessId}`);
@@ -76,7 +90,6 @@ router.post('/hire', verifyToken, async (req: any, res: any) => {
       [businessId, employee_id]
     );
 
-    console.log('SUCCESS: Employee hired');
     res.json({ success: true, message: 'Employee hired successfully' });
     
   } catch (err: any) {
@@ -90,7 +103,7 @@ router.get('/payments/history', verifyToken, async (req: any, res: any) => {
   try {
     const businessId = req.userId || req.user?.business_id;
     const result = await pool.query(
-      `SELECT p.*, ae.display_name as employee_name 
+      `SELECT p.*, ae.display_name as employee_name, ae.icon_emoji 
        FROM payments p 
        LEFT JOIN ai_employees ae ON p.employee_id = ae.id 
        WHERE p.business_id = $1 

@@ -18,13 +18,15 @@ import paymentRoutes from './routes/payments';
 import paymentsWebhookRoutes from './routes/payments-webhook';
 import callsRoutes from './routes/calls';
 import employeeRoutes from './routes/employees';
-import businessRoutes from './routes/business'; // NEW: Botari Brain routes
+import businessRoutes from './routes/business';
+import agentActionsRoutes from './routes/agent-actions'; // NEW: Functional AI agents
+import whatsappWebhookRoutes from './routes/whatsapp-webhook'; // NEW: WhatsApp webhook handler
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 
-// CORS - Fixed spacing issues in URLs
+// CORS - Cleaned URLs (removed spaces)
 const corsOptions = {
   origin: [
     'https://botari-frontend.vercel.app',
@@ -45,13 +47,14 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Botari API is running!',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    features: ['AI Agents', 'WhatsApp Integration', 'Voice Calls', 'Payments']
   });
 });
 
 // Test endpoint
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'CORS is working!' });
+  res.json({ message: 'API is working!' });
 });
 
 // Routes
@@ -63,7 +66,9 @@ app.use('/api/messages/history', messageHistoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/employees', employeeRoutes);
-app.use('/api/business', businessRoutes); // NEW: Business context & agent config
+app.use('/api/business', businessRoutes);
+app.use('/api/agents', agentActionsRoutes); // All employee actions
+app.use('/api/webhook/whatsapp', whatsappWebhookRoutes); // WhatsApp incoming messages
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/telegram', telegramRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
@@ -88,5 +93,7 @@ if (require.main === module) {
   const PORT = process.env.PORT || 4000;
   app.listen(PORT, () => {
     console.log(`🚀 Botari API running on port ${PORT}`);
+    console.log(`🤖 AI Agents: Active`);
+    console.log(`📱 WhatsApp Webhook: /api/webhook/whatsapp`);
   });
 }
