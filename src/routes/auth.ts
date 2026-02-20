@@ -103,7 +103,8 @@ router.post('/register', async (req, res) => {
 
     res.status(500).json({ 
       error: 'Registration failed. Please try again.',
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: err.message,
+      code: err.code
     });
   }
 });
@@ -159,7 +160,7 @@ router.post('/login', async (req, res) => {
     });
   } catch (err: any) {
     console.error('Login error details:', err.message, err.code, err.stack);
-    res.status(500).json({ error: 'Login failed', details: err.message });
+    res.status(500).json({ error: 'Login failed', details: err.message, code: err.code });
   }
 });
 
