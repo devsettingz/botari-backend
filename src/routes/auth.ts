@@ -22,6 +22,7 @@ pool.on('error', (err) => {
 
 // REGISTER
 router.post('/register', async (req, res) => {
+  console.log('Registration request received:', req.body);
   const { business_name, country, email, password, name, phone } = req.body;
 
   console.log('Registration attempt:', { business_name, country, email, name, phone });
@@ -109,13 +110,16 @@ router.post('/register', async (req, res) => {
 
 // LOGIN
 router.post('/login', async (req, res) => {
+  console.log('Login request received:', req.body);
   const { email, password } = req.body;
 
   if (!email || !password) {
+    console.log('Missing email or password');
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
   try {
+    console.log('Querying database for user:', email);
     const userResult = await pool.query(
       `SELECT u.*, b.business_name 
        FROM users u
@@ -154,8 +158,8 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (err: any) {
-    console.error('Login error:', err);
-    res.status(500).json({ error: 'Login failed' });
+    console.error('Login error details:', err.message, err.code, err.stack);
+    res.status(500).json({ error: 'Login failed', details: err.message });
   }
 });
 
