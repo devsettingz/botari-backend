@@ -50,16 +50,16 @@ router.post('/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert business
+    // Insert business (using 'name' column, not 'business_name')
     const businessResult = await pool.query(
-      `INSERT INTO businesses (business_name, country, email, phone) 
+      `INSERT INTO businesses (name, email, phone, country) 
        VALUES ($1, $2, $3, $4) 
-       RETURNING id, business_name`,
-      [business_name, country, email, phone || null]
+       RETURNING id, name`,
+      [business_name, email, phone || null, country]
     );
     
     const business_id = businessResult.rows[0].id;
-    const business_name_returned = businessResult.rows[0].business_name;
+    const business_name_returned = businessResult.rows[0].name;
 
     // Insert user
     const userResult = await pool.query(
@@ -121,7 +121,7 @@ router.post('/login', async (req, res) => {
   try {
     console.log('Querying database for user:', email);
     const userResult = await pool.query(
-      `SELECT u.*, b.business_name 
+      `SELECT u.*, b.name as business_name 
        FROM users u
        JOIN businesses b ON u.business_id = b.id
        WHERE u.email = $1`, 
