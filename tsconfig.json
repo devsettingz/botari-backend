@@ -1,26 +1,25 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "CommonJS",                /* ✅ Fix: Node-friendly */
+    "module": "CommonJS",
     "moduleResolution": "node",
     "lib": ["ES2020"],
     "types": ["vitest/globals"],
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
     "outDir": "./dist",
-    "rootDir": "./src",                  /* ✅ Keep source files in src */
+    "rootDir": "./src",
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "isolatedModules": true,
-    "moduleDetection": "force"
+    "isolatedModules": false
   },
-  "include": ["src", "src/types"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

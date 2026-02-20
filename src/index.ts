@@ -21,6 +21,10 @@ import employeeRoutes from './routes/employees';
 import businessRoutes from './routes/business';
 import agentActionsRoutes from './routes/agent-actions'; // NEW: Functional AI agents
 import whatsappWebhookRoutes from './routes/whatsapp-webhook'; // NEW: WhatsApp webhook handler
+import voiceWebhookRoutes from './routes/voice-webhook'; // NEW: Voice webhook handler
+import analyticsRoutes from './routes/analytics'; // NEW: Analytics routes
+import { baileysManager } from './whatsapp'; // NEW: WhatsApp Baileys Manager
+import { initializeVonage } from './voice/VonageService'; // NEW: Vonage Voice Service
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -48,7 +52,7 @@ app.get('/', (req, res) => {
     message: 'Botari API is running!',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
-    features: ['AI Agents', 'WhatsApp Integration', 'Voice Calls', 'Payments']
+    features: ['AI Agents', 'WhatsApp Integration', 'Voice Calls', 'Payments', 'Analytics']
   });
 });
 
@@ -75,6 +79,8 @@ app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/payments/webhook', paymentsWebhookRoutes);
 app.use('/api/calls', callsRoutes);
+app.use('/api/voice/webhook', voiceWebhookRoutes); // Vonage voice webhooks
+app.use('/api/analytics', analyticsRoutes); // Analytics API
 
 // 404 handler
 app.use((req, res) => {
@@ -89,11 +95,39 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 export { app };
 
+// Initialize Services on startup
+async function initializeServices(): Promise<void> {
+  try {
+    // Initialize Vonage Voice Service
+    initializeVonage();
+    console.log('🔊 Vonage Voice Service: Initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize Vonage Voice Service:', error);
+    // Continue running - calls will fail gracefully
+  }
+
+  try {
+    // Initialize Baileys Manager (restores persisted sessions from PostgreSQL)
+    await baileysManager.initialize();
+    console.log('📱 WhatsApp Manager: Initialized');
+  } catch (error) {
+    console.error('❌ Failed to initialize WhatsApp Manager:', error);
+    // Continue running - WhatsApp can be connected later via API
+  }
+}
+
 if (require.main === module) {
   const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () => {
+  
+  // Start server and initialize services
+  app.listen(PORT, async () => {
     console.log(`🚀 Botari API running on port ${PORT}`);
     console.log(`🤖 AI Agents: Active`);
     console.log(`📱 WhatsApp Webhook: /api/webhook/whatsapp`);
+    console.log(`🔊 Voice Webhook: /api/voice/webhook`);
+    console.log(`📊 Analytics API: /api/analytics`);
+    
+    // Initialize async services
+    await initializeServices();
   });
 }
