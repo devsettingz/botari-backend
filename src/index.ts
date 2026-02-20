@@ -11,6 +11,7 @@ import messageHistoryRoutes from './routes/messages-history';
 import conversationListRoutes from './routes/conversations-list';
 import dashboardRoutes from './routes/dashboard';
 import adminRoutes from './routes/admin';
+import adminAuthRoutes from './routes/admin-auth';
 import whatsappRoutes from './routes/whatsapp';
 import telegramRoutes from './routes/telegram';
 import subscriptionRoutes from './routes/subscriptions';
@@ -35,8 +36,10 @@ const corsOptions = {
   origin: [
     'https://botari-frontend.vercel.app',
     'https://botari-ai.vercel.app',
+    'https://botari-admin.vercel.app',
     'http://localhost:5173',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:3001'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -69,6 +72,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/messages/history', messageHistoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/agents', agentActionsRoutes); // All employee actions
