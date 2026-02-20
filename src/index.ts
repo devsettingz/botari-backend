@@ -99,8 +99,20 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 export { app };
 
+// Import migrations runner
+import { runMigrations } from './database/migrations';
+
 // Initialize Services on startup
 async function initializeServices(): Promise<void> {
+  try {
+    // Run database migrations first
+    await runMigrations();
+    console.log('📊 Database migrations: Complete');
+  } catch (error) {
+    console.error('❌ Failed to run migrations:', error);
+    // Continue - might be a connection issue
+  }
+
   try {
     // Initialize Vonage Voice Service
     initializeVonage();
