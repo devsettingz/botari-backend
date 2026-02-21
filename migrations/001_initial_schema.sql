@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================================
 
 -- Businesses (main tenant table)
-CREATE TABLE IF NOT EXISTS IF NOT EXISTS businesses (
+CREATE TABLE IF NOT EXISTS businesses (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
