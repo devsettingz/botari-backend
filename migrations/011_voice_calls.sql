@@ -12,7 +12,7 @@
 -- ============================================================================
 DROP TABLE IF EXISTS calls CASCADE;
 
-CREATE TABLE calls (
+CREATE TABLE IF NOT EXISTS calls (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     employee_id INTEGER REFERENCES ai_employees(id) ON DELETE SET NULL,

@@ -14,7 +14,7 @@ DROP TABLE IF EXISTS whatsapp_sessions CASCADE;
 -- ============================================================================
 -- Stores WhatsApp connection credentials and session state for each business
 -- ============================================================================
-CREATE TABLE whatsapp_sessions (
+CREATE TABLE IF NOT EXISTS whatsapp_sessions (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     employee_id INTEGER NOT NULL REFERENCES ai_employees(id) ON DELETE CASCADE,
@@ -38,17 +38,17 @@ CREATE TABLE whatsapp_sessions (
 );
 
 -- Indexes for faster lookups
-CREATE INDEX idx_whatsapp_sessions_business ON whatsapp_sessions(business_id);
-CREATE INDEX idx_whatsapp_sessions_employee ON whatsapp_sessions(employee_id);
-CREATE INDEX idx_whatsapp_sessions_status ON whatsapp_sessions(status);
-CREATE INDEX idx_whatsapp_sessions_phone ON whatsapp_sessions(phone_number);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_business ON whatsapp_sessions(business_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_employee ON whatsapp_sessions(employee_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_status ON whatsapp_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_sessions_phone ON whatsapp_sessions(phone_number);
 
 -- ============================================================================
 -- WHATSAPP MESSAGES TABLE
 -- ============================================================================
 -- Stores message history for WhatsApp conversations
 -- ============================================================================
-CREATE TABLE whatsapp_messages (
+CREATE TABLE IF NOT EXISTS whatsapp_messages (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     
@@ -87,17 +87,17 @@ CREATE TABLE whatsapp_messages (
 );
 
 -- Indexes for message queries
-CREATE INDEX idx_whatsapp_messages_business ON whatsapp_messages(business_id);
-CREATE INDEX idx_whatsapp_messages_sender ON whatsapp_messages(sender);
-CREATE INDEX idx_whatsapp_messages_recipient ON whatsapp_messages(recipient);
-CREATE INDEX idx_whatsapp_messages_direction ON whatsapp_messages(direction);
-CREATE INDEX idx_whatsapp_messages_status ON whatsapp_messages(status);
-CREATE INDEX idx_whatsapp_messages_created ON whatsapp_messages(created_at);
-CREATE INDEX idx_whatsapp_messages_conversation ON whatsapp_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_business ON whatsapp_messages(business_id);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_sender ON whatsapp_messages(sender);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_recipient ON whatsapp_messages(recipient);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_direction ON whatsapp_messages(direction);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_status ON whatsapp_messages(status);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_created ON whatsapp_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_conversation ON whatsapp_messages(conversation_id);
 
 -- Composite index for conversation lookups
-CREATE INDEX idx_whatsapp_messages_business_sender ON whatsapp_messages(business_id, sender);
-CREATE INDEX idx_whatsapp_messages_business_created ON whatsapp_messages(business_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_business_sender ON whatsapp_messages(business_id, sender);
+CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_business_created ON whatsapp_messages(business_id, created_at);
 
 -- ============================================================================
 -- TRIGGERS FOR UPDATED_AT
@@ -114,13 +114,13 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger for whatsapp_sessions
-CREATE TRIGGER update_whatsapp_sessions_updated_at
+CREATE TRIGGER IF NOT EXISTS update_whatsapp_sessions_updated_at
     BEFORE UPDATE ON whatsapp_sessions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger for whatsapp_messages
-CREATE TRIGGER update_whatsapp_messages_updated_at
+CREATE TRIGGER IF NOT EXISTS update_whatsapp_messages_updated_at
     BEFORE UPDATE ON whatsapp_messages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
@@ -154,8 +154,8 @@ BEGIN
 END $$;
 
 -- Add indexes for business_employees
-CREATE INDEX IF NOT EXISTS idx_business_employees_status ON business_employees(connection_status);
-CREATE INDEX IF NOT EXISTS idx_business_employees_whatsapp ON business_employees(whatsapp_number);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS idx_business_employees_status ON business_employees(connection_status);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS idx_business_employees_whatsapp ON business_employees(whatsapp_number);
 
 -- ============================================================================
 -- VIEWS FOR CONVENIENCE

@@ -16,7 +16,7 @@
 DROP TABLE IF EXISTS inventory_logs CASCADE;
 DROP TABLE IF EXISTS products CASCADE;
 
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     
@@ -60,7 +60,7 @@ CREATE INDEX idx_products_search ON products USING gin(to_tsvector('english', na
 -- ============================================================================
 -- INVENTORY LOGS TABLE (Track all inventory changes)
 -- ============================================================================
-CREATE TABLE inventory_logs (
+CREATE TABLE IF NOT EXISTS inventory_logs (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
@@ -88,7 +88,7 @@ CREATE INDEX idx_inventory_logs_created ON inventory_logs(created_at);
 -- ============================================================================
 DROP TABLE IF EXISTS customers CASCADE;
 
-CREATE TABLE customers (
+CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     
@@ -120,7 +120,7 @@ CREATE INDEX idx_customers_name ON customers(name) WHERE name IS NOT NULL;
 -- ============================================================================
 DROP TABLE IF EXISTS appointments CASCADE;
 
-CREATE TABLE appointments (
+CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     customer_phone VARCHAR(20) NOT NULL,
@@ -162,7 +162,7 @@ CREATE INDEX idx_appointments_date_range ON appointments(business_id, scheduled_
 -- ============================================================================
 DROP TABLE IF EXISTS orders CASCADE;
 
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     customer_phone VARCHAR(20) NOT NULL,
@@ -206,7 +206,7 @@ CREATE INDEX idx_orders_recent ON orders(business_id, created_at DESC);
 -- ============================================================================
 DROP TABLE IF EXISTS action_logs CASCADE;
 
-CREATE TABLE action_logs (
+CREATE TABLE IF NOT EXISTS action_logs (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     
@@ -235,7 +235,7 @@ CREATE INDEX idx_action_logs_conversation ON action_logs(conversation_id);
 -- ============================================================================
 DROP TABLE IF EXISTS email_queue CASCADE;
 
-CREATE TABLE email_queue (
+CREATE TABLE IF NOT EXISTS email_queue (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     
@@ -272,7 +272,7 @@ CREATE INDEX idx_email_queue_created ON email_queue(created_at);
 -- ============================================================================
 DROP TABLE IF EXISTS follow_ups CASCADE;
 
-CREATE TABLE follow_ups (
+CREATE TABLE IF NOT EXISTS follow_ups (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     customer_phone VARCHAR(20) NOT NULL,
@@ -305,7 +305,7 @@ CREATE INDEX idx_follow_ups_status ON follow_ups(status);
 -- ============================================================================
 DROP TABLE IF EXISTS escalations CASCADE;
 
-CREATE TABLE escalations (
+CREATE TABLE IF NOT EXISTS escalations (
     id SERIAL PRIMARY KEY,
     business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
     conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
