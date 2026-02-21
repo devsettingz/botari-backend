@@ -25,6 +25,8 @@ import whatsappWebhookRoutes from './routes/whatsapp-webhook'; // NEW: WhatsApp 
 import voiceWebhookRoutes from './routes/voice-webhook'; // NEW: Voice webhook handler
 import analyticsRoutes from './routes/analytics'; // NEW: Analytics routes
 import seedRoutes from './routes/seed'; // NEW: Seed data routes
+import simpleAdminRoutes from './routes/simple-admin'; // SIMPLE: Working admin auth
+import simpleEmployeeRoutes from './routes/simple-employees'; // SIMPLE: Working employees
 import { baileysManager } from './whatsapp'; // NEW: WhatsApp Baileys Manager
 import { initializeVonage } from './voice/VonageService'; // NEW: Vonage Voice Service
 
@@ -75,6 +77,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/seed', seedRoutes); // Seed data endpoints
+app.use('/api/simple/admin', simpleAdminRoutes); // SIMPLE: Working admin auth
+app.use('/api/simple/employees', simpleEmployeeRoutes); // SIMPLE: Working employees
 app.use('/api/employees', employeeRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/agents', agentActionsRoutes); // All employee actions
