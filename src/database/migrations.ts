@@ -19,6 +19,19 @@ async function runMigrations() {
     )
   `);
   
+  // Check if we need to reset (if initial schema not present)
+  const { rows: businessesExists } = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_name = 'businesses'
+    )
+  `);
+  
+  if (!businessesExists[0].exists) {
+    console.log('  → Businesses table not found, clearing migration history for fresh start...');
+    await pool.query('DELETE FROM migrations');
+  }
+  
   // Get list of executed migrations
   const { rows: executed } = await pool.query('SELECT filename FROM migrations');
   const executedFiles = new Set(executed.map(r => r.filename));
