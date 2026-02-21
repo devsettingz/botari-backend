@@ -24,6 +24,7 @@ import agentActionsRoutes from './routes/agent-actions'; // NEW: Functional AI a
 import whatsappWebhookRoutes from './routes/whatsapp-webhook'; // NEW: WhatsApp webhook handler
 import voiceWebhookRoutes from './routes/voice-webhook'; // NEW: Voice webhook handler
 import analyticsRoutes from './routes/analytics'; // NEW: Analytics routes
+import seedRoutes from './routes/seed'; // NEW: Seed data routes
 import { baileysManager } from './whatsapp'; // NEW: WhatsApp Baileys Manager
 import { initializeVonage } from './voice/VonageService'; // NEW: Vonage Voice Service
 
@@ -73,6 +74,7 @@ app.use('/api/messages/history', messageHistoryRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/seed', seedRoutes); // Seed data endpoints
 app.use('/api/employees', employeeRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/agents', agentActionsRoutes); // All employee actions
