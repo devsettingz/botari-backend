@@ -26,7 +26,7 @@ DROP VIEW IF EXISTS customer_activity_stats CASCADE;
 CREATE OR REPLACE VIEW business_daily_stats AS
 SELECT 
     c.business_id,
-    b.business_name,
+    b.name as business_name,
     DATE(c.started_at) as date,
     COUNT(*) as conversation_count,
     SUM(c.message_count) as total_messages,
@@ -36,7 +36,7 @@ SELECT
     AVG(EXTRACT(EPOCH FROM (c.closed_at - c.started_at))) FILTER (WHERE c.status = 'closed') as avg_conversation_duration
 FROM conversations c
 JOIN businesses b ON c.business_id = b.id
-GROUP BY c.business_id, b.business_name, DATE(c.started_at);
+GROUP BY c.business_id, b.name as business_name, DATE(c.started_at);
 
 -- ============================================================================
 -- VIEW: Employee Performance
@@ -52,7 +52,7 @@ SELECT
     ae.employee_role,
     ae.name as employee_name,
     be.business_id,
-    b.business_name,
+    b.name as business_name,
     COUNT(DISTINCT c.id) as conversations_handled,
     COUNT(m.id) as messages_sent,
     COUNT(al.id) as actions_executed,
@@ -71,7 +71,7 @@ LEFT JOIN action_logs al ON al.business_id = be.business_id
     AND al.executed_by = LOWER(ae.name)
 LEFT JOIN feedback f ON f.conversation_id = c.id
 WHERE be.is_active = true AND ae.is_active = true
-GROUP BY be.employee_id, ae.display_name, ae.employee_role, ae.name, be.business_id, b.business_name;
+GROUP BY be.employee_id, ae.display_name, ae.employee_role, ae.name, be.business_id, b.name as business_name;
 
 -- ============================================================================
 -- VIEW: Revenue Metrics
@@ -125,7 +125,7 @@ SELECT
     p.id as product_id,
     p.name as product_name,
     p.business_id,
-    b.business_name,
+    b.name as business_name,
     COUNT(al.id) as total_inquiries,
     COUNT(al.id) FILTER (WHERE al.executed_at >= NOW() - INTERVAL '7 days') as inquiries_last_7_days,
     COUNT(al.id) FILTER (WHERE al.executed_at >= NOW() - INTERVAL '30 days') as inquiries_last_30_days,
@@ -138,7 +138,7 @@ LEFT JOIN action_logs al ON al.params->>'product_id' = p.id::text
 LEFT JOIN orders o ON o.items @> jsonb_build_array(jsonb_build_object('product_id', p.id))
     AND o.status NOT IN ('cancelled', 'refunded')
 WHERE p.is_active = true
-GROUP BY p.id, p.name, p.business_id, b.business_name;
+GROUP BY p.id, p.name, p.business_id, b.name as business_name;
 
 -- ============================================================================
 -- VIEW: Customer Activity Stats
@@ -149,7 +149,7 @@ GROUP BY p.id, p.name, p.business_id, b.business_name;
 CREATE OR REPLACE VIEW customer_activity_stats AS
 SELECT 
     c.business_id,
-    b.business_name,
+    b.name as business_name,
     c.phone as customer_phone,
     c.name as customer_name,
     COUNT(DISTINCT conv.id) as total_conversations,
@@ -165,7 +165,7 @@ JOIN businesses b ON c.business_id = b.id
 LEFT JOIN conversations conv ON conv.customer_phone = c.phone AND conv.business_id = c.business_id
 LEFT JOIN messages m ON m.conversation_id = conv.id
 LEFT JOIN orders o ON o.customer_phone = c.phone AND o.business_id = c.business_id
-GROUP BY c.business_id, b.business_name, c.phone, c.name, c.tags;
+GROUP BY c.business_id, b.name as business_name, c.phone, c.name, c.tags;
 
 -- ============================================================================
 -- VIEW: Platform Overview

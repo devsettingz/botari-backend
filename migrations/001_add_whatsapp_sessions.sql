@@ -165,7 +165,7 @@ CREATE INDEX IF NOT EXISTS idx_business_employees_whatsapp ON business_employees
 CREATE OR REPLACE VIEW active_whatsapp_sessions AS
 SELECT 
     ws.*,
-    b.business_name,
+    b.name as business_name,
     ae.display_name as employee_name,
     ae.employee_role
 FROM whatsapp_sessions ws
@@ -177,7 +177,7 @@ WHERE ws.status = 'connected';
 CREATE OR REPLACE VIEW recent_whatsapp_messages AS
 SELECT 
     wm.*,
-    b.business_name
+    b.name as business_name
 FROM whatsapp_messages wm
 JOIN businesses b ON wm.business_id = b.id
 WHERE wm.created_at > NOW() - INTERVAL '24 hours'

@@ -430,7 +430,7 @@ CREATE TRIGGER update_escalations_updated_at
 CREATE OR REPLACE VIEW low_stock_products AS
 SELECT 
     p.*,
-    b.business_name
+    b.name as business_name
 FROM products p
 JOIN businesses b ON p.business_id = b.id
 WHERE p.stock_quantity <= p.low_stock_threshold
@@ -441,7 +441,7 @@ CREATE OR REPLACE VIEW todays_appointments AS
 SELECT 
     a.*,
     c.name as customer_name,
-    b.business_name
+    b.name as business_name
 FROM appointments a
 LEFT JOIN customers c ON a.business_id = c.business_id AND a.customer_phone = c.phone
 JOIN businesses b ON a.business_id = b.id
@@ -454,7 +454,7 @@ CREATE OR REPLACE VIEW recent_orders AS
 SELECT 
     o.*,
     c.name as customer_name,
-    b.business_name
+    b.name as business_name
 FROM orders o
 LEFT JOIN customers c ON o.business_id = c.business_id AND o.customer_phone = c.phone
 JOIN businesses b ON o.business_id = b.id
@@ -466,7 +466,7 @@ CREATE OR REPLACE VIEW pending_follow_ups AS
 SELECT 
     f.*,
     c.name as customer_name,
-    b.business_name,
+    b.name as business_name,
     CASE 
         WHEN f.scheduled_at < NOW() THEN 'overdue'
         WHEN f.scheduled_at < NOW() + INTERVAL '1 hour' THEN 'due_soon'

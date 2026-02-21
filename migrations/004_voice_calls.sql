@@ -83,7 +83,7 @@ CREATE TRIGGER update_calls_updated_at
 CREATE OR REPLACE VIEW active_calls AS
 SELECT 
     c.*,
-    b.business_name,
+    b.name as business_name,
     ae.display_name as employee_name
 FROM calls c
 JOIN businesses b ON c.business_id = b.id
@@ -95,7 +95,7 @@ ORDER BY c.started_at DESC;
 CREATE OR REPLACE VIEW recent_calls AS
 SELECT 
     c.*,
-    b.business_name,
+    b.name as business_name,
     ae.display_name as employee_name
 FROM calls c
 JOIN businesses b ON c.business_id = b.id
