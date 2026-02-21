@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================================================
 
 -- Businesses (main tenant table)
-CREATE TABLE businesses (
+CREATE TABLE IF NOT EXISTS IF NOT EXISTS businesses (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE businesses (
 );
 
 -- AI Employees (available personas/templates)
-CREATE TABLE ai_employees (
+CREATE TABLE IF NOT EXISTS ai_employees (
   id SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL,
   display_name VARCHAR(100) NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE ai_employees (
 );
 
 -- Business Employees (hired AI staff instances)
-CREATE TABLE business_employees (
+CREATE TABLE IF NOT EXISTS business_employees (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   employee_id INTEGER REFERENCES ai_employees(id) ON DELETE CASCADE,
@@ -68,7 +68,7 @@ CREATE TABLE business_employees (
 -- ============================================================================
 
 -- Conversations (chat threads)
-CREATE TABLE conversations (
+CREATE TABLE IF NOT EXISTS conversations (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   employee_id INTEGER REFERENCES ai_employees(id) ON DELETE SET NULL,
@@ -85,7 +85,7 @@ CREATE TABLE conversations (
 );
 
 -- Messages (individual messages in conversations)
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
   conversation_id INTEGER REFERENCES conversations(id) ON DELETE CASCADE,
   role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant', 'system', 'tool')),
@@ -103,7 +103,7 @@ CREATE TABLE messages (
 -- ============================================================================
 
 -- Channels (multi-channel configuration per business)
-CREATE TABLE channels (
+CREATE TABLE IF NOT EXISTS channels (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   channel_type VARCHAR(20) NOT NULL CHECK (channel_type IN ('whatsapp', 'email', 'voice', 'sms', 'webchat', 'facebook', 'instagram')),
@@ -116,7 +116,7 @@ CREATE TABLE channels (
 );
 
 -- WhatsApp Sessions (WhatsApp connection state)
-CREATE TABLE whatsapp_sessions (
+CREATE TABLE IF NOT EXISTS whatsapp_sessions (
   business_id INTEGER PRIMARY KEY REFERENCES businesses(id) ON DELETE CASCADE,
   session_data JSONB DEFAULT '{}',
   connection_status VARCHAR(20) CHECK (connection_status IN ('connected', 'disconnected', 'connecting', 'qr_ready', 'error')),
@@ -131,7 +131,7 @@ CREATE TABLE whatsapp_sessions (
 -- ============================================================================
 
 -- Products (inventory management)
-CREATE TABLE products (
+CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
@@ -149,7 +149,7 @@ CREATE TABLE products (
 );
 
 -- Appointments (booking/scheduling)
-CREATE TABLE appointments (
+CREATE TABLE IF NOT EXISTS appointments (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   customer_phone VARCHAR(20),
@@ -167,7 +167,7 @@ CREATE TABLE appointments (
 );
 
 -- Orders (sales transactions)
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
@@ -191,7 +191,7 @@ CREATE TABLE orders (
 -- ============================================================================
 
 -- Payments (payment transactions)
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   employee_id INTEGER REFERENCES ai_employees(id) ON DELETE SET NULL,
@@ -206,7 +206,7 @@ CREATE TABLE payments (
 );
 
 -- Subscriptions (subscription billing)
-CREATE TABLE subscriptions (
+CREATE TABLE IF NOT EXISTS subscriptions (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   plan_type VARCHAR(20) NOT NULL CHECK (plan_type IN ('starter', 'professional', 'premium', 'enterprise')),
@@ -224,7 +224,7 @@ CREATE TABLE subscriptions (
 -- ============================================================================
 
 -- Action Logs (AI action auditing)
-CREATE TABLE action_logs (
+CREATE TABLE IF NOT EXISTS action_logs (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
@@ -240,7 +240,7 @@ CREATE TABLE action_logs (
 );
 
 -- Activity Logs (general activity tracking)
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   user_id INTEGER,
@@ -254,7 +254,7 @@ CREATE TABLE activity_logs (
 );
 
 -- Error Logs (system error tracking)
-CREATE TABLE error_logs (
+CREATE TABLE IF NOT EXISTS error_logs (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE SET NULL,
   error_code VARCHAR(50),
@@ -270,7 +270,7 @@ CREATE TABLE error_logs (
 -- ============================================================================
 
 -- Daily Stats (aggregated daily metrics)
-CREATE TABLE daily_stats (
+CREATE TABLE IF NOT EXISTS daily_stats (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   date DATE NOT NULL,
@@ -285,7 +285,7 @@ CREATE TABLE daily_stats (
 );
 
 -- Customer Analytics (per customer metrics)
-CREATE TABLE customer_analytics (
+CREATE TABLE IF NOT EXISTS customer_analytics (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   customer_phone VARCHAR(20) NOT NULL,
@@ -306,7 +306,7 @@ CREATE TABLE customer_analytics (
 -- ============================================================================
 
 -- Knowledge Base (FAQ and documentation)
-CREATE TABLE knowledge_base (
+CREATE TABLE IF NOT EXISTS knowledge_base (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   employee_id INTEGER REFERENCES ai_employees(id) ON DELETE SET NULL,
@@ -321,7 +321,7 @@ CREATE TABLE knowledge_base (
 );
 
 -- Custom Instructions (AI behavior customization)
-CREATE TABLE custom_instructions (
+CREATE TABLE IF NOT EXISTS custom_instructions (
   id SERIAL PRIMARY KEY,
   business_id INTEGER REFERENCES businesses(id) ON DELETE CASCADE,
   employee_id INTEGER REFERENCES ai_employees(id) ON DELETE CASCADE,

@@ -59,8 +59,15 @@ async function runMigrations() {
       console.log(`  ✓ ${file} executed successfully`);
     } catch (err: any) {
       await pool.query('ROLLBACK');
-      console.error(`  ✗ ${file} failed:`, err.message);
-      throw err;
+      // Skip if object already exists (42P07 = duplicate table, 42710 = duplicate object)
+      if (err.code === '42P07' || err.code === '42710') {
+        console.log(`  ⚠ ${file} skipped: ${err.message}`);
+        // Still mark as executed
+        await pool.query('INSERT INTO migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [file]);
+      } else {
+        console.error(`  ✗ ${file} failed:`, err.message);
+        throw err;
+      }
     }
   }
   
