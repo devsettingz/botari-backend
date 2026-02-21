@@ -89,53 +89,60 @@ router.post('/ai-employees', async (req, res) => {
     
     let inserted = 0;
     let skipped = 0;
+    let errors = [];
     
     for (const employee of aiEmployees) {
-      // Check if already exists
-      const existing = await pool.query(
-        'SELECT id FROM ai_employees WHERE name = $1',
-        [employee.name]
-      );
-      
-      if (existing.rows.length > 0) {
-        console.log(`Skipping ${employee.name} - already exists`);
-        skipped++;
-        continue;
+      try {
+        // Check if already exists
+        const existing = await pool.query(
+          'SELECT id FROM ai_employees WHERE name = $1',
+          [employee.name]
+        );
+        
+        if (existing.rows.length > 0) {
+          console.log(`Skipping ${employee.name} - already exists`);
+          skipped++;
+          continue;
+        }
+        
+        await pool.query(
+          `INSERT INTO ai_employees 
+           (name, display_name, employee_role, description, price_monthly, assigned_channel, features, color_theme, tier, icon_emoji, tools, is_active)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            employee.name,
+            employee.display_name,
+            employee.employee_role,
+            employee.description,
+            employee.price_monthly,
+            employee.assigned_channel,
+            employee.features,
+            employee.color_theme,
+            employee.tier,
+            employee.icon_emoji,
+            employee.tools,
+            employee.is_active
+          ]
+        );
+        
+        console.log(`Inserted ${employee.name}`);
+        inserted++;
+      } catch (itemErr: any) {
+        console.error(`Error inserting ${employee.name}:`, itemErr.message);
+        errors.push({ name: employee.name, error: itemErr.message });
       }
-      
-      await pool.query(
-        `INSERT INTO ai_employees 
-         (name, display_name, employee_role, description, price_monthly, assigned_channel, features, color_theme, tier, icon_emoji, tools, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          employee.name,
-          employee.display_name,
-          employee.employee_role,
-          employee.description,
-          employee.price_monthly,
-          employee.assigned_channel,
-          employee.features,
-          employee.color_theme,
-          employee.tier,
-          employee.icon_emoji,
-          employee.tools,
-          employee.is_active
-        ]
-      );
-      
-      console.log(`Inserted ${employee.name}`);
-      inserted++;
     }
     
     res.json({
       success: true,
-      message: `AI employees seeded: ${inserted} inserted, ${skipped} skipped`,
+      message: `AI employees seeded: ${inserted} inserted, ${skipped} skipped, ${errors.length} errors`,
       inserted,
-      skipped
+      skipped,
+      errors: errors.length > 0 ? errors : undefined
     });
   } catch (err: any) {
     console.error('Seed error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
