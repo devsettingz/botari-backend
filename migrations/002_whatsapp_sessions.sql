@@ -113,14 +113,16 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Trigger for whatsapp_sessions
-CREATE TRIGGER IF NOT EXISTS update_whatsapp_sessions_updated_at
+-- Trigger for whatsapp_sessions (drop if exists first)
+DROP TRIGGER IF EXISTS update_whatsapp_sessions_updated_at ON whatsapp_sessions;
+CREATE TRIGGER update_whatsapp_sessions_updated_at
     BEFORE UPDATE ON whatsapp_sessions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Trigger for whatsapp_messages
-CREATE TRIGGER IF NOT EXISTS update_whatsapp_messages_updated_at
+-- Trigger for whatsapp_messages (drop if exists first)
+DROP TRIGGER IF EXISTS update_whatsapp_messages_updated_at ON whatsapp_messages;
+CREATE TRIGGER update_whatsapp_messages_updated_at
     BEFORE UPDATE ON whatsapp_messages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
