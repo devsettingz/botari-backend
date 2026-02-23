@@ -26,8 +26,8 @@ const verifyAdmin = (req: any, res: any, next: any) => {
   }
 };
 
-// Get all AI employees from database
-router.get('/', verifyAdmin, async (req, res) => {
+// Get all AI employees from database (public endpoint - no auth required)
+router.get('/', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, display_name, employee_role, description, 
