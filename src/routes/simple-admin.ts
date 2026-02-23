@@ -200,6 +200,16 @@ router.get('/subscriptions', verifyAdmin, async (req, res) => {
   }
 });
 
+// Get health status
+router.get('/health', verifyAdmin, async (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: '1.0.0'
+  });
+});
+
 // Get activity feed
 router.get('/activity', verifyAdmin, async (req, res) => {
   try {
