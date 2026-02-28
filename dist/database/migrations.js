@@ -1,0 +1,73 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.runMigrations = runMigrations;
+const pg_1 = require("pg");
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+const pool = new pg_1.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
+async function runMigrations() {
+    console.log('Running migrations...');
+    // Create migrations tracking table
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      id SERIAL PRIMARY KEY,
+      filename VARCHAR(255) UNIQUE NOT NULL,
+      executed_at TIMESTAMP DEFAULT NOW()
+    )
+  `);
+    // Check if we need to reset (if initial schema not present)
+    const { rows: businessesExists } = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_name = 'businesses'
+    )
+  `);
+    if (!businessesExists[0].exists) {
+        console.log('  → Businesses table not found, clearing migration history for fresh start...');
+        await pool.query('DELETE FROM migrations');
+    }
+    // Get list of executed migrations
+    const { rows: executed } = await pool.query('SELECT filename FROM migrations');
+    const executedFiles = new Set(executed.map(r => r.filename));
+    // Read migration files
+    const migrationsDir = path_1.default.join(__dirname, '../../migrations');
+    const files = fs_1.default.readdirSync(migrationsDir)
+        .filter(f => f.endsWith('.sql'))
+        .sort();
+    for (const file of files) {
+        if (executedFiles.has(file)) {
+            console.log(`  ✓ ${file} (already executed)`);
+            continue;
+        }
+        console.log(`  → Running ${file}...`);
+        const sql = fs_1.default.readFileSync(path_1.default.join(migrationsDir, file), 'utf8');
+        try {
+            await pool.query('BEGIN');
+            await pool.query(sql);
+            await pool.query('INSERT INTO migrations (filename) VALUES ($1)', [file]);
+            await pool.query('COMMIT');
+            console.log(`  ✓ ${file} executed successfully`);
+        }
+        catch (err) {
+            await pool.query('ROLLBACK');
+            // Skip if object already exists (42P07 = duplicate table, 42710 = duplicate object)
+            if (err.code === '42P07' || err.code === '42710') {
+                console.log(`  ⚠ ${file} skipped: ${err.message}`);
+                // Still mark as executed
+                await pool.query('INSERT INTO migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING', [file]);
+            }
+            else {
+                console.error(`  ✗ ${file} failed:`, err.message);
+                throw err;
+            }
+        }
+    }
+    console.log('Migrations complete!');
+}
+//# sourceMappingURL=migrations.js.map
