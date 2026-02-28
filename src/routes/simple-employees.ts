@@ -15,7 +15,7 @@ const pool = new Pool({
 
 // Hardcoded AI employees - ALWAYS available
 const ALL_EMPLOYEES = [
-  { id: 1, name: 'Botari Amina', display_name: 'Botari Amina', employee_role: 'Customer Support Specialist', description: 'AI-powered customer support for your business. Handles inquiries, complaints, and FAQs 24/7.', price_monthly: 49, assigned_channel: 'WhatsApp', tier: 'starter', color_theme: '#3B82F6', icon_emoji: '💬', avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Amina', is_active: true, features: ['24/7 WhatsApp response', 'Inventory checking', 'Order taking', 'Multilingual support'] },
+  { id: 1, name: 'BOTARI_AMINA_V2', display_name: 'BOTARI_AMINA_V2', employee_role: 'Customer Support Specialist', description: 'AI-powered customer support for your business. Handles inquiries, complaints, and FAQs 24/7.', price_monthly: 49, assigned_channel: 'WhatsApp', tier: 'starter', color_theme: '#3B82F6', icon_emoji: '💬', avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Amina', is_active: true, features: ['24/7 WhatsApp response', 'Inventory checking', 'Order taking', 'Multilingual support'] },
   { id: 2, name: 'Botari Eva', display_name: 'Botari Eva', employee_role: 'Executive Assistant', description: 'Manages your inbox, sorts emails by priority, drafts replies in your voice, schedules meetings.', price_monthly: 99, assigned_channel: 'Email', tier: 'professional', color_theme: '#8B5CF6', icon_emoji: '✉️', avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Eva', is_active: true, features: ['Email management', 'Calendar scheduling', 'Meeting notes', 'Priority sorting'] },
   { id: 3, name: 'Botari Stan', display_name: 'Botari Stan', employee_role: 'Sales Development Representative', description: 'Finds leads, sends cold emails, follows up automatically, books calls into your calendar.', price_monthly: 99, assigned_channel: 'Email/WhatsApp', tier: 'starter', color_theme: '#10B981', icon_emoji: '📈', avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Stan', is_active: true, features: ['Lead generation', 'Cold outreach', 'CRM sync', 'Analytics reports'] },
   { id: 4, name: 'Botari Rachel', display_name: 'Botari Rachel', employee_role: 'AI Receptionist', description: 'Answers phone calls 24/7 with natural voice, knows your business, books appointments.', price_monthly: 149, assigned_channel: 'Voice/WhatsApp', tier: 'premium', color_theme: '#F59E0B', icon_emoji: '🎧', avatar_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Rachel', is_active: true, features: ['Voice calls 24/7', 'Appointment booking', 'Call transcription', 'Multi-language'] },
@@ -44,7 +44,7 @@ const verifyAdmin = (req: any, res: any, next: any) => {
 
 // Get all AI employees - PUBLIC endpoint (no auth required for viewing)
 router.get('/', async (req, res) => {
-  console.log('[SimpleEmployees] GET / called');
+  console.log('[SimpleEmployees] GET / called - VERSION 2.0');
   
   // Try database first
   try {
