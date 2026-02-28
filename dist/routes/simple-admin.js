@@ -265,12 +265,54 @@ router.get('/users', verifyAdmin, async (req, res) => {
 });
 // Get settings
 router.get('/settings', verifyAdmin, async (req, res) => {
-    res.json({
-        platform_name: 'Botari AI',
-        support_email: 'support@botari.ai',
-        maintenance_mode: false,
-        allow_signups: true,
-    });
+    try {
+        const result = await pool.query('SELECT category, key, value FROM platform_settings ORDER BY category, key');
+        // Group settings by category
+        const settings = {};
+        result.rows.forEach(row => {
+            if (!settings[row.category]) {
+                settings[row.category] = {};
+            }
+            // Try to parse JSON values, otherwise use as string
+            try {
+                settings[row.category][row.key] = JSON.parse(row.value);
+            }
+            catch {
+                settings[row.category][row.key] = row.value;
+            }
+        });
+        res.json(settings);
+    }
+    catch (error) {
+        console.error('[SimpleAdmin] Settings error:', error);
+        // Return default settings
+        res.json({
+            general: { siteName: 'Botari Admin', supportEmail: 'support@botari.ai', timezone: 'UTC', dateFormat: 'YYYY-MM-DD' },
+            notifications: { emailAlerts: true, newBusinessAlert: true, paymentAlerts: true, systemAlerts: true, dailyDigest: false },
+            security: { twoFactorAuth: false, passwordExpiry: 90, sessionTimeout: 30, loginAttempts: 5 },
+            payments: { currency: 'USD', taxRate: 0, paymentGateway: 'paystack', autoRenew: true },
+        });
+    }
+});
+// Update settings
+router.put('/settings/:category', verifyAdmin, async (req, res) => {
+    const { category } = req.params;
+    const updates = req.body;
+    try {
+        // Update each setting
+        for (const [key, value] of Object.entries(updates)) {
+            const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            await pool.query(`INSERT INTO platform_settings (category, key, value, updated_at)
+         VALUES ($1, $2, $3, NOW())
+         ON CONFLICT (category, key) 
+         DO UPDATE SET value = $3, updated_at = NOW()`, [category, key, valueStr]);
+        }
+        res.json({ success: true, message: 'Settings updated' });
+    }
+    catch (error) {
+        console.error('[SimpleAdmin] Update settings error:', error);
+        res.status(500).json({ error: 'Failed to update settings' });
+    }
 });
 // Get subscriptions
 router.get('/subscriptions', verifyAdmin, async (req, res) => {
@@ -293,12 +335,30 @@ router.get('/subscriptions', verifyAdmin, async (req, res) => {
 });
 // Get health status
 router.get('/health', verifyAdmin, async (req, res) => {
-    res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        version: '1.0.0'
-    });
+    try {
+        // Check database connection
+        await pool.query('SELECT 1');
+        res.json({
+            status: 'healthy',
+            database: 'Connected',
+            api: 'Running',
+            memory: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+            uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
+            timestamp: new Date().toISOString(),
+            version: '1.0.0'
+        });
+    }
+    catch (error) {
+        res.json({
+            status: 'warning',
+            database: 'Disconnected',
+            api: 'Running',
+            memory: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+            uptime: `${Math.floor(process.uptime() / 3600)}h ${Math.floor((process.uptime() % 3600) / 60)}m`,
+            timestamp: new Date().toISOString(),
+            version: '1.0.0'
+        });
+    }
 });
 // Get activity feed
 router.get('/activity', verifyAdmin, async (req, res) => {
