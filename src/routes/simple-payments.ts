@@ -47,7 +47,7 @@ const verifyUser = (req: any, res: any, next: any) => {
 // Create a new payment (goes to pending status)
 router.post('/create', verifyUser, async (req, res) => {
   const { business_id, employee_id, amount, service_name } = req.body;
-  const user_id = req.user.user_id;
+  const user_id = req.user.id;
 
   try {
     const result = await pool.query(
@@ -71,7 +71,7 @@ router.post('/create', verifyUser, async (req, res) => {
 
 // Get user's payments with status
 router.get('/my-payments', verifyUser, async (req, res) => {
-  const user_id = req.user.user_id;
+  const user_id = req.user.id;
 
   try {
     const result = await pool.query(
@@ -90,7 +90,7 @@ router.get('/my-payments', verifyUser, async (req, res) => {
 
 // Get user's active/approved services
 router.get('/my-services', verifyUser, async (req, res) => {
-  const user_id = req.user.user_id;
+  const user_id = req.user.id;
 
   try {
     const result = await pool.query(
@@ -163,7 +163,7 @@ router.get('/admin/all', verifyAdmin, async (req, res) => {
 // Approve a payment
 router.post('/admin/:id/approve', verifyAdmin, async (req, res) => {
   const { id } = req.params;
-  const admin_id = req.user.user_id;
+  const admin_id = req.user.id;
 
   try {
     // Update payment status
@@ -207,7 +207,7 @@ router.post('/admin/:id/approve', verifyAdmin, async (req, res) => {
 router.post('/admin/:id/reject', verifyAdmin, async (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
-  const admin_id = req.user.user_id;
+  const admin_id = req.user.id;
 
   try {
     const result = await pool.query(
