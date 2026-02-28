@@ -86,15 +86,70 @@ router.get('/:id', async (req, res) => {
 });
 // Create employee - ADMIN only
 router.post('/', verifyAdmin, async (req, res) => {
-    res.json({ success: true, message: 'Employee created', employee: req.body });
+    const { name, display_name, employee_role, description, price_monthly, assigned_channel, features, color_theme, tier, icon_emoji, avatar_url } = req.body;
+    try {
+        // Get the next ID
+        const maxIdResult = await pool.query('SELECT MAX(id) as max_id FROM ai_employees');
+        const nextId = (maxIdResult.rows[0]?.max_id || 0) + 1;
+        const result = await pool.query(`INSERT INTO ai_employees (id, name, display_name, employee_role, description, 
+                                 price_monthly, assigned_channel, features, 
+                                 color_theme, tier, icon_emoji, avatar_url, is_active, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10, $11, $12, true, NOW())
+       RETURNING *`, [nextId, name, display_name, employee_role, description, price_monthly,
+            assigned_channel, JSON.stringify(features || []), color_theme, tier, icon_emoji, avatar_url]);
+        console.log('[SimpleEmployees] Created new employee:', result.rows[0]);
+        res.json({ success: true, message: 'Employee created', employee: result.rows[0] });
+    }
+    catch (error) {
+        console.error('[SimpleEmployees] Error creating employee:', error);
+        res.status(500).json({ error: 'Failed to create employee', details: error.message });
+    }
 });
 // Update employee - ADMIN only
 router.put('/:id', verifyAdmin, async (req, res) => {
-    res.json({ success: true, message: 'Employee updated', id: req.params.id });
+    const { id } = req.params;
+    const updates = req.body;
+    try {
+        // Build dynamic query
+        const allowedFields = ['name', 'display_name', 'employee_role', 'description',
+            'price_monthly', 'assigned_channel', 'features',
+            'color_theme', 'tier', 'icon_emoji', 'avatar_url', 'is_active'];
+        const setClauses = [];
+        const values = [];
+        let paramIndex = 1;
+        for (const [key, value] of Object.entries(updates)) {
+            if (allowedFields.includes(key)) {
+                setClauses.push(`${key} = $${paramIndex}`);
+                values.push(key === 'features' ? JSON.stringify(value) : value);
+                paramIndex++;
+            }
+        }
+        if (setClauses.length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+        values.push(id);
+        const query = `UPDATE ai_employees SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $${paramIndex} RETURNING *`;
+        const result = await pool.query(query, values);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Employee not found' });
+        }
+        res.json({ success: true, message: 'Employee updated', employee: result.rows[0] });
+    }
+    catch (error) {
+        console.error('[SimpleEmployees] Error updating employee:', error);
+        res.status(500).json({ error: 'Failed to update employee' });
+    }
 });
 // Delete employee - ADMIN only
 router.delete('/:id', verifyAdmin, async (req, res) => {
-    res.json({ success: true, message: 'Employee deleted', id: req.params.id });
+    try {
+        await pool.query('DELETE FROM ai_employees WHERE id = $1', [req.params.id]);
+        res.json({ success: true, message: 'Employee deleted' });
+    }
+    catch (error) {
+        console.error('[SimpleEmployees] Error deleting employee:', error);
+        res.status(500).json({ error: 'Failed to delete employee' });
+    }
 });
 // Toggle active status - ADMIN only
 router.put('/:id/active', verifyAdmin, async (req, res) => {
