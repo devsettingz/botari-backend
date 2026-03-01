@@ -33,6 +33,7 @@ const seed_1 = __importDefault(require("./routes/seed")); // NEW: Seed data rout
 const simple_admin_1 = __importDefault(require("./routes/simple-admin")); // SIMPLE: Working admin auth
 const simple_employees_1 = __importDefault(require("./routes/simple-employees")); // SIMPLE: Working employees
 const simple_payments_1 = __importDefault(require("./routes/simple-payments")); // SIMPLE: Payment approvals
+const phone_numbers_1 = __importDefault(require("./routes/phone-numbers")); // Phone number management
 const whatsapp_2 = require("./whatsapp"); // NEW: WhatsApp Baileys Manager
 const VonageService_1 = require("./voice/VonageService"); // NEW: Vonage Voice Service
 dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../.env') });
@@ -80,6 +81,7 @@ app.use('/api/seed', seed_1.default); // Seed data endpoints
 app.use('/api/simple/admin', simple_admin_1.default); // SIMPLE: Working admin auth
 app.use('/api/simple/employees', simple_employees_1.default); // SIMPLE: Working employees
 app.use('/api/simple/payments', simple_payments_1.default); // SIMPLE: Payment approvals
+app.use('/api/phone-numbers', phone_numbers_1.default); // Phone number management
 app.use('/api/employees', employees_1.default);
 app.use('/api/business', business_1.default);
 app.use('/api/agents', agent_actions_1.default); // All employee actions
